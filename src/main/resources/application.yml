@@ -1,0 +1,33 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:ormdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop   # 테스트 후 자동 테이블 제거 (개발용)
+    properties:
+      hibernate:
+        show_sql: true
+        format_sql: true
+        use_sql_comments: true
+    open-in-view: false
+
+mybatis:
+  mapper-locations: classpath:mapper/**/*.xml
+  type-aliases-package: com.benchmark.orm.domain
+  configuration:
+    map-underscore-to-camel-case: true
+
+logging:
+  level:
+    org.hibernate.SQL: debug
+    org.hibernate.type.descriptor.sql.BasicBinder: trace
+    org.mybatis: debug
+    com.benchmark.orm: debug
