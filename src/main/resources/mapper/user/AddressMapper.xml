@@ -1,0 +1,40 @@
+<mapper namespace="com.benchmark.orm.domain.user.mapper.AddressMapper">
+    <insert id="insert" parameterType="com.benchmark.orm.domain.user.entity.Address">
+        INSERT INTO address (zipcode, detail, is_default, user_id)
+        VALUES (#{zipcode}, #{detail}, #{isDefault}, #{user.id})
+    </insert>
+
+    <update id="update" parameterType="com.benchmark.orm.domain.user.entity.Address">
+        UPDATE address
+        SET zipcode = #{zipcode},
+        detail = #{detail},
+        is_default = #{isDefault},
+        user_id = #{user.id}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM address WHERE id = #{id}
+    </delete>
+
+    <select id="findById" parameterType="long" resultType="com.benchmark.orm.domain.user.entity.Address">
+        SELECT * FROM address WHERE id = #{id}
+    </select>
+
+    <select id="findAll" resultType="com.benchmark.orm.domain.user.entity.Address">
+        SELECT * FROM address
+    </select>
+
+    <select id="findAllWithPaging" resultType="com.benchmark.orm.domain.user.entity.Address">
+        SELECT * FROM address LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="findAllWithSorting" resultType="com.benchmark.orm.domain.user.entity.Address">
+        SELECT * FROM address ORDER BY ${sortColumn} ${sortDirection}
+    </select>
+
+    <select id="findAllWithPagingAndSorting" resultType="com.benchmark.orm.domain.user.entity.Address">
+        SELECT * FROM address ORDER BY ${sortColumn} ${sortDirection}
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+</mapper>

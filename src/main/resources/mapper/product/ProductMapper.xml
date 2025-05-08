@@ -1,0 +1,40 @@
+<mapper namespace="com.benchmark.orm.domain.product.mapper.ProductMapper">
+    <insert id="insert" parameterType="com.benchmark.orm.domain.product.entity.Product">
+        INSERT INTO product (name, price, brand_id, category_id)
+        VALUES (#{name}, #{price}, #{brand.id}, #{category.id})
+    </insert>
+
+    <update id="update" parameterType="com.benchmark.orm.domain.product.entity.Product">
+        UPDATE product
+        SET name = #{name},
+        price = #{price},
+        brand_id = #{brand.id},
+        category_id = #{category.id}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM product WHERE id = #{id}
+    </delete>
+
+    <select id="findById" parameterType="long" resultType="com.benchmark.orm.domain.product.entity.Product">
+        SELECT * FROM product WHERE id = #{id}
+    </select>
+
+    <select id="findAll" resultType="com.benchmark.orm.domain.product.entity.Product">
+        SELECT * FROM product
+    </select>
+
+    <select id="findAllWithPaging" resultType="com.benchmark.orm.domain.product.entity.Product">
+        SELECT * FROM product LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="findAllWithSorting" resultType="com.benchmark.orm.domain.product.entity.Product">
+        SELECT * FROM product ORDER BY ${sortColumn} ${sortDirection}
+    </select>
+
+    <select id="findAllWithPagingAndSorting" resultType="com.benchmark.orm.domain.product.entity.Product">
+        SELECT * FROM product ORDER BY ${sortColumn} ${sortDirection}
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+</mapper>

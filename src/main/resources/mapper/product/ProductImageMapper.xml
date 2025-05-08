@@ -1,0 +1,39 @@
+<mapper namespace="com.benchmark.orm.domain.product.mapper.ProductImageMapper">
+    <insert id="insert" parameterType="com.benchmark.orm.domain.product.entity.ProductImage">
+        INSERT INTO product_image (url, is_thumbnail, product_id)
+        VALUES (#{url}, #{isThumbnail}, #{product.id})
+    </insert>
+
+    <update id="update" parameterType="com.benchmark.orm.domain.product.entity.ProductImage">
+        UPDATE product_image
+        SET url = #{url},
+        is_thumbnail = #{isThumbnail},
+        product_id = #{product.id}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM product_image WHERE id = #{id}
+    </delete>
+
+    <select id="findById" parameterType="long" resultType="com.benchmark.orm.domain.product.entity.ProductImage">
+        SELECT * FROM product_image WHERE id = #{id}
+    </select>
+
+    <select id="findAll" resultType="com.benchmark.orm.domain.product.entity.ProductImage">
+        SELECT * FROM product_image
+    </select>
+
+    <select id="findAllWithPaging" resultType="com.benchmark.orm.domain.product.entity.ProductImage">
+        SELECT * FROM product_image LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="findAllWithSorting" resultType="com.benchmark.orm.domain.product.entity.ProductImage">
+        SELECT * FROM product_image ORDER BY ${sortColumn} ${sortDirection}
+    </select>
+
+    <select id="findAllWithPagingAndSorting" resultType="com.benchmark.orm.domain.product.entity.ProductImage">
+        SELECT * FROM product_image ORDER BY ${sortColumn} ${sortDirection}
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+</mapper>

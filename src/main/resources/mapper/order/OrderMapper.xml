@@ -1,0 +1,39 @@
+<mapper namespace="com.benchmark.orm.domain.order.mapper.OrderMapper">
+    <insert id="insert" parameterType="com.benchmark.orm.domain.order.entity.Order">
+        INSERT INTO orders (order_date, user_id, product_id)
+        VALUES (#{orderDate}, #{user.id}, #{product.id})
+    </insert>
+
+    <update id="update" parameterType="com.benchmark.orm.domain.order.entity.Order">
+        UPDATE orders
+        SET order_date = #{orderDate},
+        user_id = #{user.id},
+        product_id = #{product.id}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM orders WHERE id = #{id}
+    </delete>
+
+    <select id="findById" parameterType="long" resultType="com.benchmark.orm.domain.order.entity.Order">
+        SELECT * FROM orders WHERE id = #{id}
+    </select>
+
+    <select id="findAll" resultType="com.benchmark.orm.domain.order.entity.Order">
+        SELECT * FROM orders
+    </select>
+
+    <select id="findAllWithPaging" resultType="com.benchmark.orm.domain.order.entity.Order">
+        SELECT * FROM orders LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="findAllWithSorting" resultType="com.benchmark.orm.domain.order.entity.Order">
+        SELECT * FROM orders ORDER BY ${sortColumn} ${sortDirection}
+    </select>
+
+    <select id="findAllWithPagingAndSorting" resultType="com.benchmark.orm.domain.order.entity.Order">
+        SELECT * FROM orders ORDER BY ${sortColumn} ${sortDirection}
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+</mapper>

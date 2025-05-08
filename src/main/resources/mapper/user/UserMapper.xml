@@ -1,0 +1,43 @@
+<mapper namespace="com.benchmark.orm.domain.user.mapper.UserMapper">
+
+    <insert id="insert" parameterType="com.benchmark.orm.domain.user.entity.User">
+        INSERT INTO user (username, email)
+        VALUES (#{username}, #{email})
+    </insert>
+
+    <update id="update" parameterType="com.benchmark.orm.domain.user.entity.User">
+        UPDATE user
+        SET username = #{username},
+        email = #{email}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM user WHERE id = #{id}
+    </delete>
+
+    <select id="findById" parameterType="long" resultType="com.benchmark.orm.domain.user.entity.User">
+        SELECT * FROM user WHERE id = #{id}
+    </select>
+
+    <select id="findAll" resultType="com.benchmark.orm.domain.user.entity.User">
+        SELECT * FROM user
+    </select>
+
+    <select id="findAllWithPaging" resultType="com.benchmark.orm.domain.user.entity.User">
+        SELECT * FROM user
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="findAllWithSorting" resultType="com.benchmark.orm.domain.user.entity.User">
+        SELECT * FROM user
+        ORDER BY ${sortColumn} ${sortDirection}
+    </select>
+
+    <select id="findAllWithPagingAndSorting" resultType="com.benchmark.orm.domain.user.entity.User">
+        SELECT * FROM user
+        ORDER BY ${sortColumn} ${sortDirection}
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+</mapper>

@@ -1,0 +1,36 @@
+<mapper namespace="com.benchmark.orm.domain.user.mapper.ImageMapper">
+    <insert id="insert" parameterType="com.benchmark.orm.domain.user.entity.Image">
+        INSERT INTO image (url, alt_text)
+        VALUES (#{url}, #{altText})
+    </insert>
+
+    <update id="update" parameterType="com.benchmark.orm.domain.user.entity.Image">
+        UPDATE image SET url = #{url}, alt_text = #{altText}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM image WHERE id = #{id}
+    </delete>
+
+    <select id="findById" parameterType="long" resultType="com.benchmark.orm.domain.user.entity.Image">
+        SELECT * FROM image WHERE id = #{id}
+    </select>
+
+    <select id="findAll" resultType="com.benchmark.orm.domain.user.entity.Image">
+        SELECT * FROM image
+    </select>
+
+    <select id="findAllWithPaging" resultType="com.benchmark.orm.domain.user.entity.Image">
+        SELECT * FROM image LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="findAllWithSorting" resultType="com.benchmark.orm.domain.user.entity.Image">
+        SELECT * FROM image ORDER BY ${sortColumn} ${sortDirection}
+    </select>
+
+    <select id="findAllWithPagingAndSorting" resultType="com.benchmark.orm.domain.user.entity.Image">
+        SELECT * FROM image ORDER BY ${sortColumn} ${sortDirection}
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+</mapper>
