@@ -1,17 +1,12 @@
 spring:
-  datasource:
-    url: jdbc:h2:mem:ormdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+  # 기본 프로필 설정
+  profiles:
+    active: h2 # 로컬 개발 시 h2 인메모리 DB 사용 (mysql, postgres, mongodb, elasticsearch, redis로 변경 가능)
 
+  # JPA 공통 설정
   jpa:
     hibernate:
-      ddl-auto: create-drop   # 테스트 후 자동 테이블 제거 (개발용)
+      ddl-auto: create-drop   # 개발 환경에서는 create-drop, 운영 환경에서는 validate 또는 none
     properties:
       hibernate:
         show_sql: true
@@ -19,15 +14,111 @@ spring:
         use_sql_comments: true
     open-in-view: false
 
+  # H2 Console 설정
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+# MyBatis 공통 설정
 mybatis:
   mapper-locations: classpath:mapper/**/*.xml
   type-aliases-package: com.benchmark.orm.domain
   configuration:
     map-underscore-to-camel-case: true
 
+# 로깅 설정
 logging:
   level:
     org.hibernate.SQL: debug
     org.hibernate.type.descriptor.sql.BasicBinder: trace
     org.mybatis: debug
     com.benchmark.orm: debug
+
+---
+# H2 프로필 설정
+spring:
+  config:
+    activate:
+      on-profile: h2
+  datasource:
+    url: jdbc:h2:mem:ormdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+---
+# MySQL 프로필 설정
+spring:
+  config:
+    activate:
+      on-profile: mysql
+  datasource:
+    url: jdbc:mysql://localhost:3306/ormdb?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: user
+    password: password
+  jpa:
+    database: mysql
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+
+---
+# PostgreSQL 프로필 설정
+spring:
+  config:
+    activate:
+      on-profile: postgres
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ormdb
+    driver-class-name: org.postgresql.Driver
+    username: user
+    password: password
+  jpa:
+    database: postgresql
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+---
+# MongoDB 프로필 설정
+spring:
+  config:
+    activate:
+      on-profile: mongodb
+  data:
+    mongodb:
+      uri: mongodb://user:password@localhost:27017/ormdb
+      auto-index-creation: true
+
+---
+# Elasticsearch 프로필 설정
+spring:
+  config:
+    activate:
+      on-profile: elasticsearch
+  elasticsearch:
+    uris: http://localhost:9200
+    connection-timeout: 5s
+    socket-timeout: 30s
+
+---
+# Redis 프로필 설정
+spring:
+  config:
+    activate:
+      on-profile: redis
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      #password: password  # 필요한 경우 주석 해제
+      timeout: 2000
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0

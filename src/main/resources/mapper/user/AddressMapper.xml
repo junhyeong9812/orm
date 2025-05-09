@@ -1,9 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
 <mapper namespace="com.benchmark.orm.domain.user.mapper.AddressMapper">
+    <!-- 주소 등록 -->
     <insert id="insert" parameterType="com.benchmark.orm.domain.user.entity.Address">
         INSERT INTO address (zipcode, detail, is_default, user_id)
         VALUES (#{zipcode}, #{detail}, #{isDefault}, #{user.id})
     </insert>
 
+    <!-- 주소 정보 수정 -->
     <update id="update" parameterType="com.benchmark.orm.domain.user.entity.Address">
         UPDATE address
         SET zipcode = #{zipcode},
@@ -13,26 +19,32 @@
         WHERE id = #{id}
     </update>
 
+    <!-- ID로 주소 삭제 -->
     <delete id="deleteById" parameterType="long">
         DELETE FROM address WHERE id = #{id}
     </delete>
 
+    <!-- ID로 주소 조회 -->
     <select id="findById" parameterType="long" resultType="com.benchmark.orm.domain.user.entity.Address">
         SELECT * FROM address WHERE id = #{id}
     </select>
 
+    <!-- 모든 주소 조회 -->
     <select id="findAll" resultType="com.benchmark.orm.domain.user.entity.Address">
         SELECT * FROM address
     </select>
 
+    <!-- 페이징된 주소 조회 -->
     <select id="findAllWithPaging" resultType="com.benchmark.orm.domain.user.entity.Address">
         SELECT * FROM address LIMIT #{limit} OFFSET #{offset}
     </select>
 
+    <!-- 정렬된 주소 조회 -->
     <select id="findAllWithSorting" resultType="com.benchmark.orm.domain.user.entity.Address">
         SELECT * FROM address ORDER BY ${sortColumn} ${sortDirection}
     </select>
 
+    <!-- 페이징 및 정렬된 주소 조회 -->
     <select id="findAllWithPagingAndSorting" resultType="com.benchmark.orm.domain.user.entity.Address">
         SELECT * FROM address ORDER BY ${sortColumn} ${sortDirection}
         LIMIT #{limit} OFFSET #{offset}

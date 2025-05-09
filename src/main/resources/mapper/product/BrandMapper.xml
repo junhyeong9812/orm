@@ -1,33 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
 <mapper namespace="com.benchmark.orm.domain.product.mapper.BrandMapper">
+    <!-- 브랜드 등록 -->
     <insert id="insert" parameterType="com.benchmark.orm.domain.product.entity.Brand">
         INSERT INTO brand (name)
         VALUES (#{name})
     </insert>
 
+    <!-- 브랜드 정보 수정 -->
     <update id="update" parameterType="com.benchmark.orm.domain.product.entity.Brand">
         UPDATE brand SET name = #{name} WHERE id = #{id}
     </update>
 
+    <!-- ID로 브랜드 삭제 -->
     <delete id="deleteById" parameterType="long">
         DELETE FROM brand WHERE id = #{id}
     </delete>
 
+    <!-- ID로 브랜드 조회 -->
     <select id="findById" parameterType="long" resultType="com.benchmark.orm.domain.product.entity.Brand">
         SELECT * FROM brand WHERE id = #{id}
     </select>
 
+    <!-- 모든 브랜드 조회 -->
     <select id="findAll" resultType="com.benchmark.orm.domain.product.entity.Brand">
         SELECT * FROM brand
     </select>
 
+    <!-- 페이징된 브랜드 조회 -->
     <select id="findAllWithPaging" resultType="com.benchmark.orm.domain.product.entity.Brand">
         SELECT * FROM brand LIMIT #{limit} OFFSET #{offset}
     </select>
 
+    <!-- 정렬된 브랜드 조회 -->
     <select id="findAllWithSorting" resultType="com.benchmark.orm.domain.product.entity.Brand">
         SELECT * FROM brand ORDER BY ${sortColumn} ${sortDirection}
     </select>
 
+    <!-- 페이징 및 정렬된 브랜드 조회 -->
     <select id="findAllWithPagingAndSorting" resultType="com.benchmark.orm.domain.product.entity.Brand">
         SELECT * FROM brand ORDER BY ${sortColumn} ${sortDirection}
         LIMIT #{limit} OFFSET #{offset}

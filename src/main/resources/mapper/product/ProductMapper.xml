@@ -1,9 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
 <mapper namespace="com.benchmark.orm.domain.product.mapper.ProductMapper">
+    <!-- 상품 등록 -->
     <insert id="insert" parameterType="com.benchmark.orm.domain.product.entity.Product">
         INSERT INTO product (name, price, brand_id, category_id)
         VALUES (#{name}, #{price}, #{brand.id}, #{category.id})
     </insert>
 
+    <!-- 상품 정보 수정 -->
     <update id="update" parameterType="com.benchmark.orm.domain.product.entity.Product">
         UPDATE product
         SET name = #{name},
@@ -13,26 +19,32 @@
         WHERE id = #{id}
     </update>
 
+    <!-- ID로 상품 삭제 -->
     <delete id="deleteById" parameterType="long">
         DELETE FROM product WHERE id = #{id}
     </delete>
 
+    <!-- ID로 상품 조회 -->
     <select id="findById" parameterType="long" resultType="com.benchmark.orm.domain.product.entity.Product">
         SELECT * FROM product WHERE id = #{id}
     </select>
 
+    <!-- 모든 상품 조회 -->
     <select id="findAll" resultType="com.benchmark.orm.domain.product.entity.Product">
         SELECT * FROM product
     </select>
 
+    <!-- 페이징된 상품 조회 -->
     <select id="findAllWithPaging" resultType="com.benchmark.orm.domain.product.entity.Product">
         SELECT * FROM product LIMIT #{limit} OFFSET #{offset}
     </select>
 
+    <!-- 정렬된 상품 조회 -->
     <select id="findAllWithSorting" resultType="com.benchmark.orm.domain.product.entity.Product">
         SELECT * FROM product ORDER BY ${sortColumn} ${sortDirection}
     </select>
 
+    <!-- 페이징 및 정렬된 상품 조회 -->
     <select id="findAllWithPagingAndSorting" resultType="com.benchmark.orm.domain.product.entity.Product">
         SELECT * FROM product ORDER BY ${sortColumn} ${sortDirection}
         LIMIT #{limit} OFFSET #{offset}

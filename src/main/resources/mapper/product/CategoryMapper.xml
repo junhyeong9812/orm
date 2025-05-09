@@ -1,35 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
 <mapper namespace="com.benchmark.orm.domain.product.mapper.CategoryMapper">
+    <!-- 카테고리 등록 -->
     <insert id="insert" parameterType="com.benchmark.orm.domain.product.entity.Category">
         INSERT INTO category (name, parent_id)
         VALUES (#{name}, #{parent.id})
     </insert>
 
+    <!-- 카테고리 정보 수정 -->
     <update id="update" parameterType="com.benchmark.orm.domain.product.entity.Category">
         UPDATE category
         SET name = #{name}, parent_id = #{parent.id}
         WHERE id = #{id}
     </update>
 
+    <!-- ID로 카테고리 삭제 -->
     <delete id="deleteById" parameterType="long">
         DELETE FROM category WHERE id = #{id}
     </delete>
 
+    <!-- ID로 카테고리 조회 -->
     <select id="findById" parameterType="long" resultType="com.benchmark.orm.domain.product.entity.Category">
         SELECT * FROM category WHERE id = #{id}
     </select>
 
+    <!-- 모든 카테고리 조회 -->
     <select id="findAll" resultType="com.benchmark.orm.domain.product.entity.Category">
         SELECT * FROM category
     </select>
 
+    <!-- 페이징된 카테고리 조회 -->
     <select id="findAllWithPaging" resultType="com.benchmark.orm.domain.product.entity.Category">
         SELECT * FROM category LIMIT #{limit} OFFSET #{offset}
     </select>
 
+    <!-- 정렬된 카테고리 조회 -->
     <select id="findAllWithSorting" resultType="com.benchmark.orm.domain.product.entity.Category">
         SELECT * FROM category ORDER BY ${sortColumn} ${sortDirection}
     </select>
 
+    <!-- 페이징 및 정렬된 카테고리 조회 -->
     <select id="findAllWithPagingAndSorting" resultType="com.benchmark.orm.domain.product.entity.Category">
         SELECT * FROM category ORDER BY ${sortColumn} ${sortDirection}
         LIMIT #{limit} OFFSET #{offset}

@@ -1,0 +1,33 @@
+# Elasticsearch 설정 파일
+
+# 클러스터 설정
+cluster.name: "orm-elasticsearch"
+node.name: "node-1"
+discovery.type: single-node
+
+# 네트워크 설정
+network.host: 0.0.0.0
+http.port: 9200
+transport.port: 9300
+
+# 메모리 설정
+bootstrap.memory_lock: true
+
+# 보안 설정
+xpack.security.enabled: false
+
+# 인덱스 설정
+action.auto_create_index: true
+
+# 한글 분석기 설정 (nori)
+index:
+  analysis:
+    analyzer:
+      korean:
+        type: custom
+        tokenizer: nori_tokenizer
+        filter: [lowercase, nori_part_of_speech]
+    tokenizer:
+      nori_tokenizer:
+        type: nori_tokenizer
+        decompound_mode: mixed
