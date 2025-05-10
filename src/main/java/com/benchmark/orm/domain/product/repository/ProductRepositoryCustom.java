@@ -1,5 +1,6 @@
 package com.benchmark.orm.domain.product.repository;
 
+import com.benchmark.orm.domain.product.dto.ProductSearchDto;
 import com.benchmark.orm.domain.product.entity.Product;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -84,4 +85,12 @@ public interface ProductRepositoryCustom {
      * @return 상품 Optional 객체
      */
     Optional<Product> findProductWithAllDetails(Long productId);
+
+    /**
+     * 검색 조건을 이용한 상품 검색 (QueryDSL 사용)
+     * @param searchDto 검색 조건 DTO
+     * @param pageable 페이징 정보
+     * @return 페이징된 상품 정보
+     */
+    Page<Product> searchProducts(ProductSearchDto searchDto, Pageable pageable);
 }

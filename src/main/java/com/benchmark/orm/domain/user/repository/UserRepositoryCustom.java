@@ -1,5 +1,6 @@
 package com.benchmark.orm.domain.user.repository;
 
+import com.benchmark.orm.domain.user.dto.UserSearchDto;
 import com.benchmark.orm.domain.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -62,4 +63,12 @@ public interface UserRepositoryCustom {
      * @return 사용자 Optional 객체
      */
     Optional<User> findUserWithProfileAndAddresses(Long userId);
+
+    /**
+     * 검색 조건을 이용한 사용자 검색 (QueryDSL 사용)
+     * @param searchDto 검색 조건 DTO
+     * @param pageable 페이징 정보
+     * @return 페이징된 사용자 정보
+     */
+    Page<User> searchUsers(UserSearchDto searchDto, Pageable pageable);
 }

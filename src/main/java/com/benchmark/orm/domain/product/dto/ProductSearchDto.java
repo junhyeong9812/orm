@@ -2,24 +2,21 @@ package com.benchmark.orm.domain.product.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * 상품 검색 조건 DTO
- */
-@Getter
+@Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProductSearchDto {
-    private String keyword;
+    private String keyword; // 상품명 검색
     private Integer minPrice;
     private Integer maxPrice;
     private Long brandId;
     private Long categoryId;
-    private Integer page;
-    private Integer size;
-    private String sortBy;
-    private String sortDirection;
+
+    // 정렬 관련 필드
+    private String sortBy; // 정렬 기준 필드
+    private String sortDirection; // 정렬 방향 (asc/desc)
 }

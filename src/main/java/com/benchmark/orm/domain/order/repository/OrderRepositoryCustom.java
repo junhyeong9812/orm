@@ -1,5 +1,6 @@
 package com.benchmark.orm.domain.order.repository;
 
+import com.benchmark.orm.domain.order.dto.OrderSearchDto;
 import com.benchmark.orm.domain.order.entity.Order;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -79,4 +80,12 @@ public interface OrderRepositoryCustom {
      * @return 페이징된 주문 리스트
      */
     Page<Order> findByUserIdWithPaging(Long userId, Pageable pageable);
+
+    /**
+     * 검색 조건을 이용한 주문 검색 (QueryDSL 사용)
+     * @param searchDto 검색 조건 DTO
+     * @param pageable 페이징 정보
+     * @return 페이징된 주문 정보
+     */
+    Page<Order> searchOrders(OrderSearchDto searchDto, Pageable pageable);
 }
