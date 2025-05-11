@@ -3,17 +3,44 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.benchmark.orm.domain.user.mapper.UserMapper">
+    <!-- ResultMap 정의 -->
+    <resultMap id="userResultMap" type="com.benchmark.orm.domain.user.entity.User">
+        <id property="id" column="id"/>
+        <result property="username" column="username"/>
+        <result property="email" column="email"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <association property="profile" javaType="com.benchmark.orm.domain.user.entity.UserProfile">
+            <id property="id" column="profile_id"/>
+            <result property="nickname" column="nickname"/>
+            <result property="gender" column="gender"/>
+            <association property="profileImage" javaType="com.benchmark.orm.domain.user.entity.Image">
+                <id property="id" column="image_id"/>
+                <result property="url" column="image_url"/>
+                <result property="altText" column="alt_text"/>
+            </association>
+        </association>
+        <collection property="addresses" ofType="com.benchmark.orm.domain.user.entity.Address">
+            <id property="id" column="address_id"/>
+            <result property="zipcode" column="zipcode"/>
+            <result property="detail" column="detail"/>
+            <result property="isDefault" column="is_default"/>
+        </collection>
+    </resultMap>
+
     <!-- 사용자 등록 -->
-    <insert id="insert" parameterType="com.benchmark.orm.domain.user.entity.User">
-        INSERT INTO users (username, email)
-        VALUES (#{username}, #{email})
+    <insert id="insert" parameterType="com.benchmark.orm.domain.user.entity.User" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO users (username, email, created_at, updated_at)
+        VALUES (#{username}, #{email},
+        COALESCE(#{createdAt}, CURRENT_TIMESTAMP), COALESCE(#{updatedAt}, CURRENT_TIMESTAMP))
     </insert>
 
     <!-- 사용자 정보 수정 -->
     <update id="update" parameterType="com.benchmark.orm.domain.user.entity.User">
         UPDATE users
         SET username = #{username},
-        email = #{email}
+        email = #{email},
+        updated_at = CURRENT_TIMESTAMP
         WHERE id = #{id}
     </update>
 
@@ -27,6 +54,16 @@
         SELECT * FROM users WHERE id = #{id}
     </select>
 
+    <!-- 이메일로 사용자 조회 -->
+    <select id="findByEmail" parameterType="string" resultType="com.benchmark.orm.domain.user.entity.User">
+        SELECT * FROM users WHERE email = #{email}
+    </select>
+
+    <!-- 사용자명으로 사용자 조회 -->
+    <select id="findByUsername" parameterType="string" resultType="com.benchmark.orm.domain.user.entity.User">
+        SELECT * FROM users WHERE username = #{username}
+    </select>
+
     <!-- 모든 사용자 조회 -->
     <select id="findAll" resultType="com.benchmark.orm.domain.user.entity.User">
         SELECT * FROM users
@@ -35,19 +72,18 @@
     <!-- 페이징된 사용자 조회 -->
     <select id="findAllWithPaging" resultType="com.benchmark.orm.domain.user.entity.User">
         SELECT * FROM users
+        ORDER BY id ASC
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
     <!-- 정렬된 사용자 조회 -->
     <select id="findAllWithSorting" resultType="com.benchmark.orm.domain.user.entity.User">
-        SELECT * FROM users
-        ORDER BY ${sortColumn} ${sortDirection}
+        SELECT * FROM users ORDER BY ${sortColumn} ${sortDirection}
     </select>
 
     <!-- 페이징 및 정렬된 사용자 조회 -->
     <select id="findAllWithPagingAndSorting" resultType="com.benchmark.orm.domain.user.entity.User">
-        SELECT * FROM users
-        ORDER BY ${sortColumn} ${sortDirection}
+        SELECT * FROM users ORDER BY ${sortColumn} ${sortDirection}
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
@@ -72,7 +108,7 @@
                 <if test="searchDto.email != null and searchDto.email != ''">
                     <choose>
                         <when test="(searchDto.keyword == null or searchDto.keyword == '')
-                        and (searchDto.username == null or searchDto.username == '')">
+                                 and (searchDto.username == null or searchDto.username == '')">
                             email LIKE CONCAT('%', #{searchDto.email}, '%')
                         </when>
                         <otherwise>
@@ -100,5 +136,25 @@
     <select id="countBySearchDto" resultType="int">
         SELECT COUNT(*) FROM users
         <include refid="searchCondition"/>
+    </select>
+
+    <!-- 사용자와 프로필 정보 함께 조회 -->
+    <select id="findUserWithProfile" parameterType="long" resultMap="userResultMap">
+        SELECT u.id, u.username, u.email, u.created_at, u.updated_at,
+        p.id as profile_id, p.nickname, p.gender,
+        i.id as image_id, i.url as image_url, i.alt_text
+        FROM users u
+        LEFT JOIN user_profile p ON u.id = p.user_id
+        LEFT JOIN image i ON p.image_id = i.id
+        WHERE u.id = #{id}
+    </select>
+
+    <!-- 사용자와 주소 정보 함께 조회 -->
+    <select id="findUserWithAddresses" parameterType="long" resultMap="userResultMap">
+        SELECT u.id, u.username, u.email, u.created_at, u.updated_at,
+        a.id as address_id, a.zipcode, a.detail, a.is_default
+        FROM users u
+        LEFT JOIN address a ON u.id = a.user_id
+        WHERE u.id = #{id}
     </select>
 </mapper>

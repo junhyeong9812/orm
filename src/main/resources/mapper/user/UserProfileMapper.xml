@@ -3,10 +3,30 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.benchmark.orm.domain.user.mapper.UserProfileMapper">
+    <!-- ResultMap 정의 -->
+    <resultMap id="userProfileResultMap" type="com.benchmark.orm.domain.user.entity.UserProfile">
+        <id property="id" column="id"/>
+        <result property="nickname" column="nickname"/>
+        <result property="gender" column="gender"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <association property="user" javaType="com.benchmark.orm.domain.user.entity.User">
+            <id property="id" column="user_id"/>
+            <result property="username" column="username"/>
+            <result property="email" column="email"/>
+        </association>
+        <association property="profileImage" javaType="com.benchmark.orm.domain.user.entity.Image">
+            <id property="id" column="image_id"/>
+            <result property="url" column="image_url"/>
+            <result property="altText" column="alt_text"/>
+        </association>
+    </resultMap>
+
     <!-- 사용자 프로필 등록 -->
-    <insert id="insert" parameterType="com.benchmark.orm.domain.user.entity.UserProfile">
-        INSERT INTO user_profile (nickname, gender, user_id, image_id)
-        VALUES (#{nickname}, #{gender}, #{user.id}, #{profileImage.id})
+    <insert id="insert" parameterType="com.benchmark.orm.domain.user.entity.UserProfile" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_profile (nickname, gender, user_id, image_id, created_at, updated_at)
+        VALUES (#{nickname}, #{gender}, #{user.id}, #{profileImage.id},
+        COALESCE(#{createdAt}, CURRENT_TIMESTAMP), COALESCE(#{updatedAt}, CURRENT_TIMESTAMP))
     </insert>
 
     <!-- 사용자 프로필 정보 수정 -->
@@ -14,8 +34,13 @@
         UPDATE user_profile
         SET nickname = #{nickname},
         gender = #{gender},
-        user_id = #{user.id},
-        image_id = #{profileImage.id}
+        <if test="user != null and user.id != null">
+            user_id = #{user.id},
+        </if>
+        <if test="profileImage != null and profileImage.id != null">
+            image_id = #{profileImage.id},
+        </if>
+        updated_at = CURRENT_TIMESTAMP
         WHERE id = #{id}
     </update>
 
@@ -29,6 +54,11 @@
         SELECT * FROM user_profile WHERE id = #{id}
     </select>
 
+    <!-- 사용자 ID로 프로필 조회 -->
+    <select id="findByUserId" parameterType="long" resultType="com.benchmark.orm.domain.user.entity.UserProfile">
+        SELECT * FROM user_profile WHERE user_id = #{userId}
+    </select>
+
     <!-- 모든 사용자 프로필 조회 -->
     <select id="findAll" resultType="com.benchmark.orm.domain.user.entity.UserProfile">
         SELECT * FROM user_profile
@@ -37,19 +67,27 @@
     <!-- 페이징된 사용자 프로필 조회 -->
     <select id="findAllWithPaging" resultType="com.benchmark.orm.domain.user.entity.UserProfile">
         SELECT * FROM user_profile
+        ORDER BY id ASC
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <!-- 정렬된 사용자 프로필 조회 -->
-    <select id="findAllWithSorting" resultType="com.benchmark.orm.domain.user.entity.UserProfile">
-        SELECT * FROM user_profile
-        ORDER BY ${sortColumn} ${sortDirection}
+    <!-- 사용자 프로필과 이미지 정보 함께 조회 -->
+    <select id="findProfileWithImage" parameterType="long" resultMap="userProfileResultMap">
+        SELECT p.id, p.nickname, p.gender, p.user_id, p.created_at, p.updated_at,
+        i.id as image_id, i.url as image_url, i.alt_text
+        FROM user_profile p
+        LEFT JOIN image i ON p.image_id = i.id
+        WHERE p.id = #{id}
     </select>
 
-    <!-- 페이징 및 정렬된 사용자 프로필 조회 -->
-    <select id="findAllWithPagingAndSorting" resultType="com.benchmark.orm.domain.user.entity.UserProfile">
-        SELECT * FROM user_profile
-        ORDER BY ${sortColumn} ${sortDirection}
-        LIMIT #{limit} OFFSET #{offset}
+    <!-- 사용자 ID로 사용자 프로필과 이미지 정보 함께 조회 -->
+    <select id="findProfileWithImageByUserId" parameterType="long" resultMap="userProfileResultMap">
+        SELECT p.id, p.nickname, p.gender, p.user_id, p.created_at, p.updated_at,
+        u.id as user_id, u.username, u.email,
+        i.id as image_id, i.url as image_url, i.alt_text
+        FROM user_profile p
+        LEFT JOIN users u ON p.user_id = u.id
+        LEFT JOIN image i ON p.image_id = i.id
+        WHERE p.user_id = #{userId}
     </select>
 </mapper>

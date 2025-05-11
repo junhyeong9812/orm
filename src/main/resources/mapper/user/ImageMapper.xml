@@ -4,14 +4,18 @@
 
 <mapper namespace="com.benchmark.orm.domain.user.mapper.ImageMapper">
     <!-- 이미지 등록 -->
-    <insert id="insert" parameterType="com.benchmark.orm.domain.user.entity.Image">
-        INSERT INTO image (url, alt_text)
-        VALUES (#{url}, #{altText})
+    <insert id="insert" parameterType="com.benchmark.orm.domain.user.entity.Image" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO image (url, alt_text, created_at, updated_at)
+        VALUES (#{url}, #{altText},
+        COALESCE(#{createdAt}, CURRENT_TIMESTAMP), COALESCE(#{updatedAt}, CURRENT_TIMESTAMP))
     </insert>
 
     <!-- 이미지 정보 수정 -->
     <update id="update" parameterType="com.benchmark.orm.domain.user.entity.Image">
-        UPDATE image SET url = #{url}, alt_text = #{altText}
+        UPDATE image
+        SET url = #{url},
+        alt_text = #{altText},
+        updated_at = CURRENT_TIMESTAMP
         WHERE id = #{id}
     </update>
 
@@ -25,6 +29,11 @@
         SELECT * FROM image WHERE id = #{id}
     </select>
 
+    <!-- URL로 이미지 조회 -->
+    <select id="findByUrl" parameterType="string" resultType="com.benchmark.orm.domain.user.entity.Image">
+        SELECT * FROM image WHERE url = #{url}
+    </select>
+
     <!-- 모든 이미지 조회 -->
     <select id="findAll" resultType="com.benchmark.orm.domain.user.entity.Image">
         SELECT * FROM image
@@ -32,17 +41,8 @@
 
     <!-- 페이징된 이미지 조회 -->
     <select id="findAllWithPaging" resultType="com.benchmark.orm.domain.user.entity.Image">
-        SELECT * FROM image LIMIT #{limit} OFFSET #{offset}
-    </select>
-
-    <!-- 정렬된 이미지 조회 -->
-    <select id="findAllWithSorting" resultType="com.benchmark.orm.domain.user.entity.Image">
-        SELECT * FROM image ORDER BY ${sortColumn} ${sortDirection}
-    </select>
-
-    <!-- 페이징 및 정렬된 이미지 조회 -->
-    <select id="findAllWithPagingAndSorting" resultType="com.benchmark.orm.domain.user.entity.Image">
-        SELECT * FROM image ORDER BY ${sortColumn} ${sortDirection}
+        SELECT * FROM image
+        ORDER BY id ASC
         LIMIT #{limit} OFFSET #{offset}
     </select>
 </mapper>
