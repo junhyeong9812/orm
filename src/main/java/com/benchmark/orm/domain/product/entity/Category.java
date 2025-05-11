@@ -2,6 +2,8 @@ package com.benchmark.orm.domain.product.entity;
 
 import com.benchmark.orm.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -11,6 +13,8 @@ import java.util.List;
 @Entity
 @Getter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Category extends BaseTimeEntity {
 
     @Id
@@ -23,6 +27,7 @@ public class Category extends BaseTimeEntity {
     @JoinColumn(name = "parent_id")
     private Category parent;
 
+    @Builder.Default
     @OneToMany(mappedBy = "parent")
     private List<Category> children = new ArrayList<>();
 }

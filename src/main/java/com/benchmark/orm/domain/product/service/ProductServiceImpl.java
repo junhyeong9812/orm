@@ -256,20 +256,66 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public List<ProductResponseDto> searchProducts(ProductSearchDto searchDto) {
-        // 검색 조건에 따라 동적으로 조회
+    public Page<ProductResponseDto> searchProductsJpql(ProductSearchDto searchDto, Pageable pageable) {
+        // 구현 필요: JPQL 기반의 검색 쿼리 실행
+        // 여기에서는 기본 검색을 위한 임시 구현
+        Page<Product> productPage = null;
+
         if (searchDto.getKeyword() != null && !searchDto.getKeyword().isEmpty()) {
-            return searchProductsByKeywordJpql(searchDto.getKeyword());
+            // 키워드 검색
+            List<Product> products = productRepository.searchProductsByKeywordJpql(searchDto.getKeyword());
+            productPage = new PageImpl<>(products, pageable, products.size());
         } else if (searchDto.getMinPrice() != null && searchDto.getMaxPrice() != null) {
-            return findProductsByPriceBetweenQueryDsl(searchDto.getMinPrice(), searchDto.getMaxPrice());
+            // 가격 범위 검색
+            List<Product> products = productRepository.findByPriceBetweenJpql(
+                    searchDto.getMinPrice(), searchDto.getMaxPrice());
+            productPage = new PageImpl<>(products, pageable, products.size());
         } else if (searchDto.getBrandId() != null) {
-            return findProductsByBrandIdQueryDsl(searchDto.getBrandId());
+            // 브랜드 ID 검색
+            List<Product> products = productRepository.findByBrandIdJpql(searchDto.getBrandId());
+            productPage = new PageImpl<>(products, pageable, products.size());
         } else if (searchDto.getCategoryId() != null) {
-            return findProductsByCategoryIdQueryDsl(searchDto.getCategoryId());
+            // 카테고리 ID 검색
+            List<Product> products = productRepository.findByCategoryIdJpql(searchDto.getCategoryId());
+            productPage = new PageImpl<>(products, pageable, products.size());
         } else {
-            // 기본적으로 모든 상품 반환
-            return findAllProductsJpa();
+            // 기본 조회
+            productPage = productRepository.findAll(pageable);
         }
+
+        List<ProductResponseDto> productDtos = productPage.getContent().stream()
+                .map(ProductResponseDto::fromEntity)
+                .collect(Collectors.toList());
+
+        return new PageImpl<>(productDtos, pageable, productPage.getTotalElements());
+    }
+
+    @Override
+    public Page<ProductResponseDto> searchProductsQueryDsl(ProductSearchDto searchDto, Pageable pageable) {
+        // QueryDSL 방식으로 검색
+        Page<Product> productPage = productRepository.searchProducts(searchDto, pageable);
+
+        List<ProductResponseDto> productDtos = productPage.getContent().stream()
+                .map(ProductResponseDto::fromEntity)
+                .collect(Collectors.toList());
+
+        return new PageImpl<>(productDtos, pageable, productPage.getTotalElements());
+    }
+
+    @Override
+    public Page<ProductResponseDto> searchProductsMyBatis(ProductSearchDto searchDto, int offset, int limit,
+                                                          String sortColumn, String sortDirection) {
+        // MyBatis 방식으로 검색 (가정: ProductMapper에 관련 메서드가 구현되어 있음)
+        List<Product> products = productMapper.searchProducts(searchDto, offset, limit, sortColumn, sortDirection);
+
+        List<ProductResponseDto> productDtos = products.stream()
+                .map(ProductResponseDto::fromEntity)
+                .collect(Collectors.toList());
+
+        // 전체 개수 조회 (가정: ProductMapper에 관련 메서드가 구현되어 있음)
+        int total = productMapper.countBySearchDto(searchDto);
+
+        return new PageImpl<>(productDtos, Pageable.ofSize(limit).withPage(offset / limit), total);
     }
 
     @Override

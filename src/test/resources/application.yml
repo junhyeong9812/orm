@@ -1,0 +1,39 @@
+spring:
+  # 데이터베이스 연결 설정
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  # H2 콘솔 설정
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  # JPA 설정
+  jpa:
+    hibernate:
+      ddl-auto: create-drop   # 테스트 시작 시 테이블 생성, 종료 시 삭제
+    properties:
+      hibernate:
+        show_sql: true        # SQL 쿼리 출력
+        format_sql: true      # SQL 쿼리 포맷팅
+        use_sql_comments: true  # SQL 쿼리 주석 표시
+    open-in-view: false       # OSIV 비활성화
+
+# MyBatis 설정
+mybatis:
+  mapper-locations: classpath:mapper/**/*.xml
+  type-aliases-package: com.benchmark.orm.domain
+  configuration:
+    map-underscore-to-camel-case: true  # 스네이크 케이스 -> 카멜 케이스 자동 변환
+
+# 로깅 설정
+logging:
+  level:
+    org.hibernate.SQL: debug              # 하이버네이트 SQL 로그
+    org.hibernate.type.descriptor.sql.BasicBinder: trace  # SQL 바인딩 파라미터 로그
+    org.mybatis: debug                    # MyBatis 로그
+    com.benchmark.orm: debug              # 애플리케이션 로그

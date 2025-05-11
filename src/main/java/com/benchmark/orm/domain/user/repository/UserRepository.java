@@ -1,6 +1,8 @@
 package com.benchmark.orm.domain.user.repository;
 
 import com.benchmark.orm.domain.user.entity.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -47,10 +49,43 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
     Optional<User> findUserWithAddressesJpql(@Param("userId") Long userId);
 
     /**
-     * JPQL을 사용한 사용자 검색
+     * JPQL을 사용한 키워드로 사용자 검색
      * @param keyword 검색 키워드
      * @return 사용자 리스트
      */
     @Query("SELECT u FROM User u WHERE u.username LIKE %:keyword% OR u.email LIKE %:keyword%")
     List<User> searchUsersByKeywordJpql(@Param("keyword") String keyword);
+
+    /**
+     * JPQL을 사용한 사용자명으로 사용자 검색
+     * @param username 사용자명
+     * @return 사용자 리스트
+     */
+    @Query("SELECT u FROM User u WHERE u.username LIKE %:username%")
+    List<User> searchUsersByUsernameJpql(@Param("username") String username);
+
+    /**
+     * JPQL을 사용한 이메일로 사용자 검색
+     * @param email 이메일
+     * @return 사용자 리스트
+     */
+    @Query("SELECT u FROM User u WHERE u.email LIKE %:email%")
+    List<User> searchUsersByEmailJpql(@Param("email") String email);
+
+    /**
+     * JPQL을 사용한 복합 조건으로 사용자 검색 (페이징)
+     * @param keyword 검색 키워드
+     * @param username 사용자명
+     * @param email 이메일
+     * @param pageable 페이징 정보
+     * @return 페이징된 사용자 정보
+     */
+    @Query("SELECT u FROM User u WHERE " +
+            "(:keyword IS NULL OR :keyword = '' OR u.username LIKE %:keyword% OR u.email LIKE %:keyword%) AND " +
+            "(:username IS NULL OR :username = '' OR u.username LIKE %:username%) AND " +
+            "(:email IS NULL OR :email = '' OR u.email LIKE %:email%)")
+    Page<User> searchUsersJpql(@Param("keyword") String keyword,
+                               @Param("username") String username,
+                               @Param("email") String email,
+                               Pageable pageable);
 }

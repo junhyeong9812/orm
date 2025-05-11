@@ -1,9 +1,13 @@
 package com.benchmark.orm.domain.order.repository;
 
+import com.benchmark.orm.domain.order.dto.OrderSearchDto;
 import com.benchmark.orm.domain.order.entity.Order;
 import com.benchmark.orm.domain.order.entity.QOrder;
 import com.benchmark.orm.domain.product.entity.QProduct;
 import com.benchmark.orm.domain.user.entity.QUser;
+import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.dsl.PathBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import org.springframework.data.domain.Page;
@@ -179,6 +183,87 @@ public class OrderRepositoryCustomImpl implements OrderRepositoryCustom {
                 .selectFrom(order)
                 .join(order.user, user)
                 .where(user.id.eq(userId))
+                .fetchCount();
+
+        return new PageImpl<>(orders, pageable, total);
+    }
+
+    @Override
+    public Page<Order> searchOrders(OrderSearchDto searchDto, Pageable pageable) {
+        QOrder order = QOrder.order;
+        QUser user = QUser.user;
+        QProduct product = QProduct.product;
+
+        BooleanBuilder builder = new BooleanBuilder();
+
+        // 사용자 ID 검색
+        if (searchDto.getUserId() != null) {
+            builder.and(order.user.id.eq(searchDto.getUserId()));
+        }
+
+        // 상품 ID 검색
+        if (searchDto.getProductId() != null) {
+            builder.and(order.product.id.eq(searchDto.getProductId()));
+        }
+
+        // 주문 날짜 범위 검색
+        if (searchDto.getStartDate() != null && searchDto.getEndDate() != null) {
+            builder.and(order.orderDate.between(searchDto.getStartDate(), searchDto.getEndDate()));
+        } else if (searchDto.getStartDate() != null) {
+            builder.and(order.orderDate.goe(searchDto.getStartDate()));
+        } else if (searchDto.getEndDate() != null) {
+            builder.and(order.orderDate.loe(searchDto.getEndDate()));
+        }
+
+        // 정렬 설정
+        List<OrderSpecifier<?>> orderSpecifiers = new ArrayList<>();
+
+        // DTO의 정렬 정보가 있으면 사용
+        if (searchDto.getSortBy() != null && !searchDto.getSortBy().isEmpty()) {
+            PathBuilder<Order> entityPath = new PathBuilder<>(Order.class, "order");
+
+            if ("asc".equalsIgnoreCase(searchDto.getSortDirection())) {
+                orderSpecifiers.add(entityPath.getString(searchDto.getSortBy()).asc());
+            } else {
+                orderSpecifiers.add(entityPath.getString(searchDto.getSortBy()).desc());
+            }
+        }
+
+        // Pageable의 정렬 정보 사용
+        if (pageable.getSort() != null && pageable.getSort().isSorted()) {
+            pageable.getSort().forEach(sort -> {
+                PathBuilder<Order> entityPath = new PathBuilder<>(Order.class, "order");
+
+                if (sort.isAscending()) {
+                    orderSpecifiers.add(entityPath.getString(sort.getProperty()).asc());
+                } else {
+                    orderSpecifiers.add(entityPath.getString(sort.getProperty()).desc());
+                }
+            });
+        }
+
+        // 기본 정렬이 없는 경우 ID 기준으로 정렬
+        if (orderSpecifiers.isEmpty()) {
+            orderSpecifiers.add(order.id.asc());
+        }
+
+        // 검색 결과 조회
+        List<Order> orders = queryFactory
+                .selectFrom(order)
+                .leftJoin(order.user, user)
+                .leftJoin(order.product, product)
+                .where(builder)
+                .orderBy(orderSpecifiers.toArray(new OrderSpecifier[0]))
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+        // 전체 카운트 쿼리
+        long total = queryFactory
+                .selectFrom(order)
+                .leftJoin(order.user, user)
+                .leftJoin(order.product, product)
+                .where(builder)
                 .fetchCount();
 
         return new PageImpl<>(orders, pageable, total);

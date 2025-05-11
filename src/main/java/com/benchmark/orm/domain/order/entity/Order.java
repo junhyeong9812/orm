@@ -4,6 +4,8 @@ import com.benchmark.orm.global.entity.BaseEntity;
 import com.benchmark.orm.domain.user.entity.User;
 import com.benchmark.orm.domain.product.entity.Product;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -12,6 +14,8 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @Table(name = "orders")
 public class Order extends BaseEntity {
 

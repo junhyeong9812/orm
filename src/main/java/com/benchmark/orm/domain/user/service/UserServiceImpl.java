@@ -201,15 +201,47 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserResponseDto> searchUsers(UserSearchDto searchDto) {
-        // 검색 조건에 따라 동적으로 쿼리 생성 (QueryDSL 활용)
-        // 단순 구현으로 키워드 검색만 수행
-        if (searchDto.getKeyword() != null && !searchDto.getKeyword().isEmpty()) {
-            return searchUsersByKeywordJpql(searchDto.getKeyword());
-        }
+    public Page<UserResponseDto> searchUsersJpql(UserSearchDto searchDto, Pageable pageable) {
+        // JPQL 방식으로 검색
+        Page<User> userPage = userRepository.searchUsersJpql(
+                searchDto.getKeyword(),
+                searchDto.getUsername(),
+                searchDto.getEmail(),
+                pageable);
 
-        // 기본적으로 모든 사용자 반환
-        return findAllUsersJpa();
+        List<UserResponseDto> userDtos = userPage.getContent().stream()
+                .map(UserResponseDto::fromEntity)
+                .collect(Collectors.toList());
+
+        return new PageImpl<>(userDtos, pageable, userPage.getTotalElements());
+    }
+
+    @Override
+    public Page<UserResponseDto> searchUsersQueryDsl(UserSearchDto searchDto, Pageable pageable) {
+        // QueryDSL 방식으로 검색
+        Page<User> userPage = userRepository.searchUsers(searchDto, pageable);
+
+        List<UserResponseDto> userDtos = userPage.getContent().stream()
+                .map(UserResponseDto::fromEntity)
+                .collect(Collectors.toList());
+
+        return new PageImpl<>(userDtos, pageable, userPage.getTotalElements());
+    }
+
+    @Override
+    public Page<UserResponseDto> searchUsersMyBatis(UserSearchDto searchDto, int offset, int limit,
+                                                    String sortColumn, String sortDirection) {
+        // MyBatis 방식으로 검색
+        List<User> users = userMapper.searchUsers(searchDto, offset, limit, sortColumn, sortDirection);
+
+        List<UserResponseDto> userDtos = users.stream()
+                .map(UserResponseDto::fromEntity)
+                .collect(Collectors.toList());
+
+        // 전체 개수 조회
+        int total = userMapper.countBySearchDto(searchDto);
+
+        return new PageImpl<>(userDtos, Pageable.ofSize(limit).withPage(offset / limit), total);
     }
 
     @Override

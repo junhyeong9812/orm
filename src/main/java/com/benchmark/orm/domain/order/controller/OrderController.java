@@ -377,13 +377,71 @@ public class OrderController {
     }
 
     /**
-     * 검색 조건으로 주문 검색
+     * 검색 조건으로 JPQL을 사용한 주문 검색
      * @param searchDto 검색 조건 DTO
+     * @param page 페이지 번호
+     * @param size 페이지 크기
+     * @param sortBy 정렬 기준
+     * @param direction 정렬 방향
      * @return 검색된 주문 목록
      */
-    @PostMapping("/search")
-    public ResponseEntity<List<OrderResponseDto>> searchOrders(@RequestBody OrderSearchDto searchDto) {
-        return ResponseEntity.ok(orderService.searchOrders(searchDto));
+    @PostMapping("/jpql/search")
+    public ResponseEntity<Page<OrderResponseDto>> searchOrdersJpql(
+            @RequestBody OrderSearchDto searchDto,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String direction) {
+
+        Sort.Direction sortDirection = direction.equalsIgnoreCase("asc")
+                ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Sort sort = Sort.by(sortDirection, sortBy);
+
+        return ResponseEntity.ok(orderService.searchOrdersJpql(searchDto, PageRequest.of(page, size, sort)));
+    }
+
+    /**
+     * 검색 조건으로 QueryDSL을 사용한 주문 검색
+     * @param searchDto 검색 조건 DTO
+     * @param page 페이지 번호
+     * @param size 페이지 크기
+     * @param sortBy 정렬 기준
+     * @param direction 정렬 방향
+     * @return 검색된 주문 목록
+     */
+    @PostMapping("/querydsl/search")
+    public ResponseEntity<Page<OrderResponseDto>> searchOrdersQueryDsl(
+            @RequestBody OrderSearchDto searchDto,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String direction) {
+
+        Sort.Direction sortDirection = direction.equalsIgnoreCase("asc")
+                ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Sort sort = Sort.by(sortDirection, sortBy);
+
+        return ResponseEntity.ok(orderService.searchOrdersQueryDsl(searchDto, PageRequest.of(page, size, sort)));
+    }
+
+    /**
+     * 검색 조건으로 MyBatis를 사용한 주문 검색
+     * @param searchDto 검색 조건 DTO
+     * @param offset 시작 위치
+     * @param limit 제한
+     * @param sortBy 정렬 기준
+     * @param direction 정렬 방향
+     * @return 검색된 주문 목록
+     */
+    @PostMapping("/mybatis/search")
+    public ResponseEntity<Page<OrderResponseDto>> searchOrdersMyBatis(
+            @RequestBody OrderSearchDto searchDto,
+            @RequestParam(defaultValue = "0") int offset,
+            @RequestParam(defaultValue = "10") int limit,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String direction) {
+
+        return ResponseEntity.ok(orderService.searchOrdersMyBatis(searchDto, offset, limit, sortBy, direction));
     }
 
     /**

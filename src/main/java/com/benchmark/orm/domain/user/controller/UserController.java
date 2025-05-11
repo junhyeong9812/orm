@@ -338,13 +338,71 @@ public class UserController {
     }
 
     /**
-     * 검색 조건으로 사용자 검색
+     * 검색 조건으로 JPQL을 사용한 사용자 검색
      * @param searchDto 검색 조건 DTO
+     * @param page 페이지 번호
+     * @param size 페이지 크기
+     * @param sortBy 정렬 기준
+     * @param direction 정렬 방향
      * @return 검색된 사용자 목록
      */
-    @PostMapping("/search")
-    public ResponseEntity<List<UserResponseDto>> searchUsers(@RequestBody UserSearchDto searchDto) {
-        return ResponseEntity.ok(userService.searchUsers(searchDto));
+    @PostMapping("/jpql/search")
+    public ResponseEntity<Page<UserResponseDto>> searchUsersJpql(
+            @RequestBody UserSearchDto searchDto,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String direction) {
+
+        Sort.Direction sortDirection = direction.equalsIgnoreCase("asc")
+                ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Sort sort = Sort.by(sortDirection, sortBy);
+
+        return ResponseEntity.ok(userService.searchUsersJpql(searchDto, PageRequest.of(page, size, sort)));
+    }
+
+    /**
+     * 검색 조건으로 QueryDSL을 사용한 사용자 검색
+     * @param searchDto 검색 조건 DTO
+     * @param page 페이지 번호
+     * @param size 페이지 크기
+     * @param sortBy 정렬 기준
+     * @param direction 정렬 방향
+     * @return 검색된 사용자 목록
+     */
+    @PostMapping("/querydsl/search")
+    public ResponseEntity<Page<UserResponseDto>> searchUsersQueryDsl(
+            @RequestBody UserSearchDto searchDto,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String direction) {
+
+        Sort.Direction sortDirection = direction.equalsIgnoreCase("asc")
+                ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Sort sort = Sort.by(sortDirection, sortBy);
+
+        return ResponseEntity.ok(userService.searchUsersQueryDsl(searchDto, PageRequest.of(page, size, sort)));
+    }
+
+    /**
+     * 검색 조건으로 MyBatis를 사용한 사용자 검색
+     * @param searchDto 검색 조건 DTO
+     * @param offset 시작 위치
+     * @param limit 제한
+     * @param sortBy 정렬 기준
+     * @param direction 정렬 방향
+     * @return 검색된 사용자 목록
+     */
+    @PostMapping("/mybatis/search")
+    public ResponseEntity<Page<UserResponseDto>> searchUsersMyBatis(
+            @RequestBody UserSearchDto searchDto,
+            @RequestParam(defaultValue = "0") int offset,
+            @RequestParam(defaultValue = "10") int limit,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String direction) {
+
+        return ResponseEntity.ok(userService.searchUsersMyBatis(searchDto, offset, limit, sortBy, direction));
     }
 
     /**

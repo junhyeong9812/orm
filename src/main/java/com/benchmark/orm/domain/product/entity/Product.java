@@ -2,6 +2,8 @@ package com.benchmark.orm.domain.product.entity;
 
 import com.benchmark.orm.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -11,6 +13,8 @@ import java.util.List;
 @Entity
 @Getter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Product extends BaseTimeEntity {
 
     @Id
@@ -28,6 +32,7 @@ public class Product extends BaseTimeEntity {
     @JoinColumn(name = "category_id")
     private Category category;
 
+    @Builder.Default
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
     private List<ProductImage> images = new ArrayList<>();
 }

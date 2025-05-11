@@ -259,18 +259,48 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public List<OrderResponseDto> searchOrders(OrderSearchDto searchDto) {
-        // 검색 조건에 따라 동적으로 조회
-        if (searchDto.getUserId() != null) {
-            return findOrdersByUserIdQueryDsl(searchDto.getUserId());
-        } else if (searchDto.getProductId() != null) {
-            return findOrdersByProductIdQueryDsl(searchDto.getProductId());
-        } else if (searchDto.getStartDate() != null && searchDto.getEndDate() != null) {
-            return findOrdersByOrderDateBetweenQueryDsl(searchDto.getStartDate(), searchDto.getEndDate());
-        } else {
-            // 기본적으로 모든 주문 반환
-            return findAllOrdersJpa();
-        }
+    public Page<OrderResponseDto> searchOrdersJpql(OrderSearchDto searchDto, Pageable pageable) {
+        // JPQL 방식으로 검색
+        Page<Order> orderPage = orderRepository.searchOrdersJpql(
+                searchDto.getUserId(),
+                searchDto.getProductId(),
+                searchDto.getStartDate(),
+                searchDto.getEndDate(),
+                pageable);
+
+        List<OrderResponseDto> orderDtos = orderPage.getContent().stream()
+                .map(OrderResponseDto::fromEntity)
+                .collect(Collectors.toList());
+
+        return new PageImpl<>(orderDtos, pageable, orderPage.getTotalElements());
+    }
+
+    @Override
+    public Page<OrderResponseDto> searchOrdersQueryDsl(OrderSearchDto searchDto, Pageable pageable) {
+        // QueryDSL 방식으로 검색
+        Page<Order> orderPage = orderRepository.searchOrders(searchDto, pageable);
+
+        List<OrderResponseDto> orderDtos = orderPage.getContent().stream()
+                .map(OrderResponseDto::fromEntity)
+                .collect(Collectors.toList());
+
+        return new PageImpl<>(orderDtos, pageable, orderPage.getTotalElements());
+    }
+
+    @Override
+    public Page<OrderResponseDto> searchOrdersMyBatis(OrderSearchDto searchDto, int offset, int limit,
+                                                      String sortColumn, String sortDirection) {
+        // MyBatis 방식으로 검색
+        List<Order> orders = orderMapper.searchOrders(searchDto, offset, limit, sortColumn, sortDirection);
+
+        List<OrderResponseDto> orderDtos = orders.stream()
+                .map(OrderResponseDto::fromEntity)
+                .collect(Collectors.toList());
+
+        // 전체 개수 조회
+        int total = orderMapper.countBySearchDto(searchDto);
+
+        return new PageImpl<>(orderDtos, Pageable.ofSize(limit).withPage(offset / limit), total);
     }
 
     @Override

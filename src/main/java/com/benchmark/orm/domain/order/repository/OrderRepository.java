@@ -1,6 +1,8 @@
 package com.benchmark.orm.domain.order.repository;
 
 import com.benchmark.orm.domain.order.entity.Order;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -63,4 +65,24 @@ public interface OrderRepository extends JpaRepository<Order, Long>, OrderReposi
      */
     @Query("SELECT o FROM Order o LEFT JOIN FETCH o.user LEFT JOIN FETCH o.product WHERE o.id = :orderId")
     Optional<Order> findOrderWithUserAndProductJpql(@Param("orderId") Long orderId);
+
+    /**
+     * JPQL을 사용한 복합 조건으로 주문 검색 (페이징)
+     * @param userId 사용자 ID
+     * @param productId 상품 ID
+     * @param startDate 시작 날짜
+     * @param endDate 종료 날짜
+     * @param pageable 페이징 정보
+     * @return 페이징된 주문 정보
+     */
+    @Query("SELECT o FROM Order o WHERE " +
+            "(:userId IS NULL OR o.user.id = :userId) AND " +
+            "(:productId IS NULL OR o.product.id = :productId) AND " +
+            "(:startDate IS NULL OR o.orderDate >= :startDate) AND " +
+            "(:endDate IS NULL OR o.orderDate <= :endDate)")
+    Page<Order> searchOrdersJpql(@Param("userId") Long userId,
+                                 @Param("productId") Long productId,
+                                 @Param("startDate") LocalDateTime startDate,
+                                 @Param("endDate") LocalDateTime endDate,
+                                 Pageable pageable);
 }

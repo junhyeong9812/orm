@@ -48,4 +48,73 @@
         SELECT * FROM orders ORDER BY ${sortColumn} ${sortDirection}
         LIMIT #{limit} OFFSET #{offset}
     </select>
+
+    <!-- 검색 조건에 따른 WHERE 절 -->
+    <sql id="searchCondition">
+        <where>
+            <if test="searchDto != null">
+                <if test="searchDto.userId != null">
+                    user_id = #{searchDto.userId}
+                </if>
+                <if test="searchDto.productId != null">
+                    <choose>
+                        <when test="searchDto.userId == null">
+                            product_id = #{searchDto.productId}
+                        </when>
+                        <otherwise>
+                            AND product_id = #{searchDto.productId}
+                        </otherwise>
+                    </choose>
+                </if>
+                <if test="searchDto.startDate != null and searchDto.endDate != null">
+                    <choose>
+                        <when test="searchDto.userId == null and searchDto.productId == null">
+                            order_date BETWEEN #{searchDto.startDate} AND #{searchDto.endDate}
+                        </when>
+                        <otherwise>
+                            AND order_date BETWEEN #{searchDto.startDate} AND #{searchDto.endDate}
+                        </otherwise>
+                    </choose>
+                </if>
+                <if test="searchDto.startDate != null and searchDto.endDate == null">
+                    <choose>
+                        <when test="searchDto.userId == null and searchDto.productId == null">
+                            order_date &gt;= #{searchDto.startDate}
+                        </when>
+                        <otherwise>
+                            AND order_date &gt;= #{searchDto.startDate}
+                        </otherwise>
+                    </choose>
+                </if>
+                <if test="searchDto.startDate == null and searchDto.endDate != null">
+                    <choose>
+                        <when test="searchDto.userId == null and searchDto.productId == null">
+                            order_date &lt;= #{searchDto.endDate}
+                        </when>
+                        <otherwise>
+                            AND order_date &lt;= #{searchDto.endDate}
+                        </otherwise>
+                    </choose>
+                </if>
+            </if>
+        </where>
+    </sql>
+
+    <!-- 검색 조건을 이용한 주문 검색 -->
+    <select id="searchOrders" resultType="com.benchmark.orm.domain.order.entity.Order">
+        SELECT * FROM orders
+        <include refid="searchCondition"/>
+        <if test="sortColumn != null and sortDirection != null">
+            ORDER BY ${sortColumn} ${sortDirection}
+        </if>
+        <if test="limit > 0">
+            LIMIT #{limit} OFFSET #{offset}
+        </if>
+    </select>
+
+    <!-- 검색 조건을 이용한 주문 총 개수 조회 -->
+    <select id="countBySearchDto" resultType="int">
+        SELECT COUNT(*) FROM orders
+        <include refid="searchCondition"/>
+    </select>
 </mapper>

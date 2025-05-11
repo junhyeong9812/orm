@@ -187,11 +187,32 @@ public interface UserService {
     List<UserResponseDto> searchUsersByKeywordJpql(String keyword);
 
     /**
-     * 검색 조건을 이용한 사용자 검색
+     * JPQL을 사용한 사용자 검색
      * @param searchDto 검색 조건 DTO
-     * @return 사용자 응답 DTO 리스트
+     * @param pageable 페이징 정보
+     * @return 페이징된 사용자 응답 DTO 객체
      */
-    List<UserResponseDto> searchUsers(UserSearchDto searchDto);
+    Page<UserResponseDto> searchUsersJpql(UserSearchDto searchDto, Pageable pageable);
+
+    /**
+     * QueryDSL을 사용한 사용자 검색
+     * @param searchDto 검색 조건 DTO
+     * @param pageable 페이징 정보
+     * @return 페이징된 사용자 응답 DTO 객체
+     */
+    Page<UserResponseDto> searchUsersQueryDsl(UserSearchDto searchDto, Pageable pageable);
+
+    /**
+     * MyBatis를 사용한 사용자 검색
+     * @param searchDto 검색 조건 DTO
+     * @param offset 시작 위치
+     * @param limit 데이터 개수
+     * @param sortColumn 정렬 컬럼
+     * @param sortDirection 정렬 방향
+     * @return 페이징 및 정렬된 사용자 응답 DTO 리스트와 총 개수
+     */
+    Page<UserResponseDto> searchUsersMyBatis(UserSearchDto searchDto, int offset, int limit,
+                                             String sortColumn, String sortDirection);
 
     /**
      * JPA를 사용하여 사용자 정보 업데이트

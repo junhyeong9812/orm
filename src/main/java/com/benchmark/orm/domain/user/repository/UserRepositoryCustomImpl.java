@@ -1,9 +1,13 @@
 package com.benchmark.orm.domain.user.repository;
 
+import com.benchmark.orm.domain.user.dto.UserSearchDto;
 import com.benchmark.orm.domain.user.entity.QAddress;
 import com.benchmark.orm.domain.user.entity.QUser;
 import com.benchmark.orm.domain.user.entity.QUserProfile;
 import com.benchmark.orm.domain.user.entity.User;
+import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.dsl.PathBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import org.springframework.data.domain.Page;
@@ -161,5 +165,76 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
         }
 
         return Optional.ofNullable(result);
+    }
+
+    @Override
+    public Page<User> searchUsers(UserSearchDto searchDto, Pageable pageable) {
+        QUser user = QUser.user;
+        BooleanBuilder builder = new BooleanBuilder();
+
+        // 키워드 검색 (사용자명 또는 이메일)
+        if (searchDto.getKeyword() != null && !searchDto.getKeyword().isEmpty()) {
+            builder.or(user.username.containsIgnoreCase(searchDto.getKeyword()));
+            builder.or(user.email.containsIgnoreCase(searchDto.getKeyword()));
+        }
+
+        // 사용자명 검색
+        if (searchDto.getUsername() != null && !searchDto.getUsername().isEmpty()) {
+            builder.and(user.username.containsIgnoreCase(searchDto.getUsername()));
+        }
+
+        // 이메일 검색
+        if (searchDto.getEmail() != null && !searchDto.getEmail().isEmpty()) {
+            builder.and(user.email.containsIgnoreCase(searchDto.getEmail()));
+        }
+
+        // 정렬 설정
+        List<OrderSpecifier<?>> orderSpecifiers = new ArrayList<>();
+
+        // DTO의 정렬 정보가 있으면 사용
+        if (searchDto.getSortBy() != null && !searchDto.getSortBy().isEmpty()) {
+            PathBuilder<User> entityPath = new PathBuilder<>(User.class, "user");
+
+            if ("asc".equalsIgnoreCase(searchDto.getSortDirection())) {
+                orderSpecifiers.add(entityPath.getString(searchDto.getSortBy()).asc());
+            } else {
+                orderSpecifiers.add(entityPath.getString(searchDto.getSortBy()).desc());
+            }
+        }
+
+        // Pageable의 정렬 정보 사용
+        if (pageable.getSort() != null && pageable.getSort().isSorted()) {
+            pageable.getSort().forEach(order -> {
+                PathBuilder<User> entityPath = new PathBuilder<>(User.class, "user");
+
+                if (order.isAscending()) {
+                    orderSpecifiers.add(entityPath.getString(order.getProperty()).asc());
+                } else {
+                    orderSpecifiers.add(entityPath.getString(order.getProperty()).desc());
+                }
+            });
+        }
+
+        // 기본 정렬이 없는 경우 ID 기준으로 정렬
+        if (orderSpecifiers.isEmpty()) {
+            orderSpecifiers.add(user.id.asc());
+        }
+
+        // 검색 결과 조회
+        List<User> users = queryFactory
+                .selectFrom(user)
+                .where(builder)
+                .orderBy(orderSpecifiers.toArray(new OrderSpecifier[0]))
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+        // 전체 카운트 쿼리
+        long total = queryFactory
+                .selectFrom(user)
+                .where(builder)
+                .fetchCount();
+
+        return new PageImpl<>(users, pageable, total);
     }
 }

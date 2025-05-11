@@ -231,11 +231,32 @@ public interface ProductService {
     List<ProductResponseDto> searchProductsByKeywordJpql(String keyword);
 
     /**
-     * 검색 조건을 이용한 상품 검색
+     * JPQL을 사용한 상품 검색
      * @param searchDto 검색 조건 DTO
-     * @return 상품 응답 DTO 리스트
+     * @param pageable 페이징 정보
+     * @return 페이징된 상품 응답 DTO 객체
      */
-    List<ProductResponseDto> searchProducts(ProductSearchDto searchDto);
+    Page<ProductResponseDto> searchProductsJpql(ProductSearchDto searchDto, Pageable pageable);
+
+    /**
+     * QueryDSL을 사용한 상품 검색
+     * @param searchDto 검색 조건 DTO
+     * @param pageable 페이징 정보
+     * @return 페이징된 상품 응답 DTO 객체
+     */
+    Page<ProductResponseDto> searchProductsQueryDsl(ProductSearchDto searchDto, Pageable pageable);
+
+    /**
+     * MyBatis를 사용한 상품 검색
+     * @param searchDto 검색 조건 DTO
+     * @param offset 시작 위치
+     * @param limit 데이터 개수
+     * @param sortColumn 정렬 컬럼
+     * @param sortDirection 정렬 방향
+     * @return 페이징 및 정렬된 상품 응답 DTO 리스트와 총 개수
+     */
+    Page<ProductResponseDto> searchProductsMyBatis(ProductSearchDto searchDto, int offset, int limit,
+                                                   String sortColumn, String sortDirection);
 
     /**
      * JPA를 사용하여 상품 정보 업데이트

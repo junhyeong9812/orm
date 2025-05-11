@@ -1,6 +1,10 @@
 package com.benchmark.orm.domain.product.repository;
 
+import com.benchmark.orm.domain.product.dto.ProductSearchDto;
 import com.benchmark.orm.domain.product.entity.*;
+import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.dsl.PathBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import org.springframework.data.domain.Page;
@@ -197,5 +201,91 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
         }
 
         return Optional.ofNullable(result);
+    }
+
+    @Override
+    public Page<Product> searchProducts(ProductSearchDto searchDto, Pageable pageable) {
+        QProduct product = QProduct.product;
+        QBrand brand = QBrand.brand;
+        QCategory category = QCategory.category;
+
+        BooleanBuilder builder = new BooleanBuilder();
+
+        // 키워드 검색 (상품명)
+        if (searchDto.getKeyword() != null && !searchDto.getKeyword().isEmpty()) {
+            builder.and(product.name.containsIgnoreCase(searchDto.getKeyword()));
+        }
+
+        // 가격 범위 검색
+        if (searchDto.getMinPrice() != null && searchDto.getMaxPrice() != null) {
+            builder.and(product.price.between(searchDto.getMinPrice(), searchDto.getMaxPrice()));
+        } else if (searchDto.getMinPrice() != null) {
+            builder.and(product.price.goe(searchDto.getMinPrice()));
+        } else if (searchDto.getMaxPrice() != null) {
+            builder.and(product.price.loe(searchDto.getMaxPrice()));
+        }
+
+        // 브랜드 ID 검색
+        if (searchDto.getBrandId() != null) {
+            builder.and(product.brand.id.eq(searchDto.getBrandId()));
+        }
+
+        // 카테고리 ID 검색
+        if (searchDto.getCategoryId() != null) {
+            builder.and(product.category.id.eq(searchDto.getCategoryId()));
+        }
+
+        // 정렬 설정
+        List<OrderSpecifier<?>> orderSpecifiers = new ArrayList<>();
+
+        // DTO의 정렬 정보가 있으면 사용
+        if (searchDto.getSortBy() != null && !searchDto.getSortBy().isEmpty()) {
+            PathBuilder<Product> entityPath = new PathBuilder<>(Product.class, "product");
+
+            if ("asc".equalsIgnoreCase(searchDto.getSortDirection())) {
+                orderSpecifiers.add(entityPath.getString(searchDto.getSortBy()).asc());
+            } else {
+                orderSpecifiers.add(entityPath.getString(searchDto.getSortBy()).desc());
+            }
+        }
+
+        // Pageable의 정렬 정보 사용
+        if (pageable.getSort() != null && pageable.getSort().isSorted()) {
+            pageable.getSort().forEach(order -> {
+                PathBuilder<Product> entityPath = new PathBuilder<>(Product.class, "product");
+
+                if (order.isAscending()) {
+                    orderSpecifiers.add(entityPath.getString(order.getProperty()).asc());
+                } else {
+                    orderSpecifiers.add(entityPath.getString(order.getProperty()).desc());
+                }
+            });
+        }
+
+        // 기본 정렬이 없는 경우 ID 기준으로 정렬
+        if (orderSpecifiers.isEmpty()) {
+            orderSpecifiers.add(product.id.asc());
+        }
+
+        // 검색 결과 조회
+        List<Product> products = queryFactory
+                .selectFrom(product)
+                .leftJoin(product.brand, brand)
+                .leftJoin(product.category, category)
+                .where(builder)
+                .orderBy(orderSpecifiers.toArray(new OrderSpecifier[0]))
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+        // 전체 카운트 쿼리
+        long total = queryFactory
+                .selectFrom(product)
+                .leftJoin(product.brand, brand)
+                .leftJoin(product.category, category)
+                .where(builder)
+                .fetchCount();
+
+        return new PageImpl<>(products, pageable, total);
     }
 }
