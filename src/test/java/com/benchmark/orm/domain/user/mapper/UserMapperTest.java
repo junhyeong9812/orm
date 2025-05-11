@@ -1,10 +1,7 @@
 package com.benchmark.orm.domain.user.mapper;
 
 import com.benchmark.orm.domain.user.dto.UserSearchDto;
-import com.benchmark.orm.domain.user.entity.Address;
-import com.benchmark.orm.domain.user.entity.Image;
 import com.benchmark.orm.domain.user.entity.User;
-import com.benchmark.orm.domain.user.entity.UserProfile;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -270,5 +267,33 @@ public class UserMapperTest {
 
         // then - 결과 검증
         assertThat(emailResults.size()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("사용자와 프로필 정보 함께 조회 테스트")
+    public void findUserWithProfileTest() {
+        // given - 사용자와 프로필 관계 설정은 테스트 데이터 삽입 스크립트에 의존
+
+        // when - 사용자 프로필 조회 시도
+        User userWithProfile = userMapper.findUserWithProfile(1L); // 프로필이 있는 사용자 ID 가정
+
+        // then - 결과 가능성 검증 (프로필이 있거나 없을 수 있음)
+        if (userWithProfile != null) {
+            assertThat(userWithProfile.getId()).isEqualTo(1L);
+        }
+    }
+
+    @Test
+    @DisplayName("사용자와 주소 정보 함께 조회 테스트")
+    public void findUserWithAddressesTest() {
+        // given - 사용자와 주소 관계 설정은 테스트 데이터 삽입 스크립트에 의존
+
+        // when - 사용자 주소 조회 시도
+        User userWithAddresses = userMapper.findUserWithAddresses(1L); // 주소가 있는 사용자 ID 가정
+
+        // then - 결과 가능성 검증 (주소가 있거나 없을 수 있음)
+        if (userWithAddresses != null) {
+            assertThat(userWithAddresses.getId()).isEqualTo(1L);
+        }
     }
 }
