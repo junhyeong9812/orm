@@ -3,18 +3,51 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.benchmark.orm.domain.order.mapper.OrderMapper">
+    <!-- ResultMap 정의 -->
+    <resultMap id="orderResultMap" type="com.benchmark.orm.domain.order.entity.Order">
+        <id property="id" column="id"/>
+        <result property="orderDate" column="order_date"/>
+        <result property="status" column="status"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <association property="user" javaType="com.benchmark.orm.domain.user.entity.User">
+            <id property="id" column="user_id"/>
+            <result property="username" column="username"/>
+            <result property="email" column="email"/>
+        </association>
+        <collection property="orderItems" ofType="com.benchmark.orm.domain.order.entity.OrderItem">
+            <id property="id" column="order_item_id"/>
+            <result property="quantity" column="quantity"/>
+            <result property="orderPrice" column="order_price"/>
+            <association property="product" javaType="com.benchmark.orm.domain.product.entity.Product">
+                <id property="id" column="product_id"/>
+                <result property="name" column="product_name"/>
+                <result property="price" column="product_price"/>
+            </association>
+        </collection>
+    </resultMap>
+
     <!-- 주문 등록 -->
-    <insert id="insert" parameterType="com.benchmark.orm.domain.order.entity.Order">
-        INSERT INTO orders (order_date, user_id, product_id)
-        VALUES (#{orderDate}, #{user.id}, #{product.id})
+    <insert id="insert" parameterType="com.benchmark.orm.domain.order.entity.Order" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO orders (order_date, status, user_id, created_at, updated_at)
+        VALUES (#{orderDate}, #{status}, #{user.id}, #{createdAt}, #{updatedAt})
     </insert>
 
     <!-- 주문 정보 수정 -->
     <update id="update" parameterType="com.benchmark.orm.domain.order.entity.Order">
         UPDATE orders
         SET order_date = #{orderDate},
+        status = #{status},
         user_id = #{user.id},
-        product_id = #{product.id}
+        updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 주문 상태 수정 -->
+    <update id="updateStatus">
+        UPDATE orders
+        SET status = #{status},
+        updated_at = NOW()
         WHERE id = #{id}
     </update>
 
@@ -28,6 +61,27 @@
         SELECT * FROM orders WHERE id = #{id}
     </select>
 
+    <!-- 사용자 ID로 주문 조회 -->
+    <select id="findByUserId" parameterType="long" resultType="com.benchmark.orm.domain.order.entity.Order">
+        SELECT * FROM orders WHERE user_id = #{userId}
+    </select>
+
+    <!-- 주문 상태로 주문 조회 -->
+    <select id="findByStatus" parameterType="string" resultType="com.benchmark.orm.domain.order.entity.Order">
+        SELECT * FROM orders WHERE status = #{status}
+    </select>
+
+    <!-- 사용자 ID와 주문 상태로 주문 조회 -->
+    <select id="findByUserIdAndStatus" resultType="com.benchmark.orm.domain.order.entity.Order">
+        SELECT * FROM orders WHERE user_id = #{userId} AND status = #{status}
+    </select>
+
+    <!-- 주문 날짜 범위로 주문 조회 -->
+    <select id="findByOrderDateBetween" resultType="com.benchmark.orm.domain.order.entity.Order">
+        SELECT * FROM orders
+        WHERE order_date BETWEEN #{startDate} AND #{endDate}
+    </select>
+
     <!-- 모든 주문 조회 -->
     <select id="findAll" resultType="com.benchmark.orm.domain.order.entity.Order">
         SELECT * FROM orders
@@ -35,7 +89,9 @@
 
     <!-- 페이징된 주문 조회 -->
     <select id="findAllWithPaging" resultType="com.benchmark.orm.domain.order.entity.Order">
-        SELECT * FROM orders LIMIT #{limit} OFFSET #{offset}
+        SELECT * FROM orders
+        ORDER BY order_date DESC
+        LIMIT #{limit} OFFSET #{offset}
     </select>
 
     <!-- 정렬된 주문 조회 -->
@@ -49,6 +105,14 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
+    <!-- 사용자별 주문 총 금액 계산 -->
+    <select id="calculateTotalOrderAmountByUserId" parameterType="long" resultType="int">
+        SELECT COALESCE(SUM(oi.order_price * oi.quantity), 0)
+        FROM orders o
+        JOIN order_items oi ON o.id = oi.order_id
+        WHERE o.user_id = #{userId}
+    </select>
+
     <!-- 검색 조건에 따른 WHERE 절 -->
     <sql id="searchCondition">
         <where>
@@ -56,19 +120,19 @@
                 <if test="searchDto.userId != null">
                     user_id = #{searchDto.userId}
                 </if>
-                <if test="searchDto.productId != null">
+                <if test="searchDto.status != null">
                     <choose>
                         <when test="searchDto.userId == null">
-                            product_id = #{searchDto.productId}
+                            status = #{searchDto.status}
                         </when>
                         <otherwise>
-                            AND product_id = #{searchDto.productId}
+                            AND status = #{searchDto.status}
                         </otherwise>
                     </choose>
                 </if>
                 <if test="searchDto.startDate != null and searchDto.endDate != null">
                     <choose>
-                        <when test="searchDto.userId == null and searchDto.productId == null">
+                        <when test="searchDto.userId == null and searchDto.status == null">
                             order_date BETWEEN #{searchDto.startDate} AND #{searchDto.endDate}
                         </when>
                         <otherwise>
@@ -78,7 +142,7 @@
                 </if>
                 <if test="searchDto.startDate != null and searchDto.endDate == null">
                     <choose>
-                        <when test="searchDto.userId == null and searchDto.productId == null">
+                        <when test="searchDto.userId == null and searchDto.status == null">
                             order_date &gt;= #{searchDto.startDate}
                         </when>
                         <otherwise>
@@ -88,7 +152,7 @@
                 </if>
                 <if test="searchDto.startDate == null and searchDto.endDate != null">
                     <choose>
-                        <when test="searchDto.userId == null and searchDto.productId == null">
+                        <when test="searchDto.userId == null and searchDto.status == null">
                             order_date &lt;= #{searchDto.endDate}
                         </when>
                         <otherwise>
@@ -116,5 +180,25 @@
     <select id="countBySearchDto" resultType="int">
         SELECT COUNT(*) FROM orders
         <include refid="searchCondition"/>
+    </select>
+
+    <!-- 주문과 주문 상품 정보 함께 조회 -->
+    <select id="findOrderWithOrderItems" parameterType="long" resultMap="orderResultMap">
+        SELECT o.id, o.order_date, o.status, o.user_id, o.created_at, o.updated_at,
+        u.username, u.email,
+        oi.id as order_item_id, oi.quantity, oi.order_price,
+        p.id as product_id, p.name as product_name, p.price as product_price
+        FROM orders o
+        LEFT JOIN users u ON o.user_id = u.id
+        LEFT JOIN order_items oi ON o.id = oi.order_id
+        LEFT JOIN product p ON oi.product_id = p.id
+        WHERE o.id = #{id}
+    </select>
+
+    <!-- 최근 주문 목록 조회 -->
+    <select id="findRecentOrders" parameterType="int" resultType="com.benchmark.orm.domain.order.entity.Order">
+        SELECT * FROM orders
+        ORDER BY order_date DESC
+        LIMIT #{limit}
     </select>
 </mapper>

@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.benchmark.orm.domain.order.mapper.OrderItemMapper">
+    <!-- ResultMap 정의 -->
+    <resultMap id="orderItemResultMap" type="com.benchmark.orm.domain.order.entity.OrderItem">
+        <id property="id" column="id"/>
+        <result property="quantity" column="quantity"/>
+        <result property="orderPrice" column="order_price"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <association property="order" javaType="com.benchmark.orm.domain.order.entity.Order">
+            <id property="id" column="order_id"/>
+            <result property="orderDate" column="order_date"/>
+            <result property="status" column="status"/>
+        </association>
+        <association property="product" javaType="com.benchmark.orm.domain.product.entity.Product">
+            <id property="id" column="product_id"/>
+            <result property="name" column="product_name"/>
+            <result property="price" column="product_price"/>
+        </association>
+    </resultMap>
+
+    <!-- 주문 상품 등록 -->
+    <insert id="insert" parameterType="com.benchmark.orm.domain.order.entity.OrderItem" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO order_items (quantity, order_price, order_id, product_id, created_at, updated_at)
+        VALUES (#{quantity}, #{orderPrice}, #{order.id}, #{product.id}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <!-- 주문 상품 정보 수정 -->
+    <update id="update" parameterType="com.benchmark.orm.domain.order.entity.OrderItem">
+        UPDATE order_items
+        SET quantity = #{quantity},
+        order_price = #{orderPrice},
+        order_id = #{order.id},
+        product_id = #{product.id},
+        updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 주문 상품 수량 수정 -->
+    <update id="updateQuantity">
+        UPDATE order_items
+        SET quantity = #{quantity},
+        updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <!-- ID로 주문 상품 삭제 -->
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM order_items WHERE id = #{id}
+    </delete>
+
+    <!-- 주문 ID로 주문 상품 삭제 -->
+    <delete id="deleteByOrderId" parameterType="long">
+        DELETE FROM order_items WHERE order_id = #{orderId}
+    </delete>
+
+    <!-- ID로 주문 상품 조회 -->
+    <select id="findById" parameterType="long" resultMap="orderItemResultMap">
+        SELECT oi.id, oi.quantity, oi.order_price, oi.created_at, oi.updated_at,
+        o.id as order_id, o.order_date, o.status,
+        p.id as product_id, p.name as product_name, p.price as product_price
+        FROM order_items oi
+        LEFT JOIN orders o ON oi.order_id = o.id
+        LEFT JOIN product p ON oi.product_id = p.id
+        WHERE oi.id = #{id}
+    </select>
+
+    <!-- 주문 ID로 주문 상품 목록 조회 -->
+    <select id="findByOrderId" parameterType="long" resultMap="orderItemResultMap">
+        SELECT oi.id, oi.quantity, oi.order_price, oi.created_at, oi.updated_at,
+        o.id as order_id, o.order_date, o.status,
+        p.id as product_id, p.name as product_name, p.price as product_price
+        FROM order_items oi
+        LEFT JOIN orders o ON oi.order_id = o.id
+        LEFT JOIN product p ON oi.product_id = p.id
+        WHERE oi.order_id = #{orderId}
+    </select>
+
+    <!-- 상품 ID로 주문 상품 목록 조회 -->
+    <select id="findByProductId" parameterType="long" resultMap="orderItemResultMap">
+        SELECT oi.id, oi.quantity, oi.order_price, oi.created_at, oi.updated_at,
+        o.id as order_id, o.order_date, o.status,
+        p.id as product_id, p.name as product_name, p.price as product_price
+        FROM order_items oi
+        LEFT JOIN orders o ON oi.order_id = o.id
+        LEFT JOIN product p ON oi.product_id = p.id
+        WHERE oi.product_id = #{productId}
+    </select>
+
+    <!-- 주문 ID와 상품 ID로 주문 상품 조회 -->
+    <select id="findByOrderIdAndProductId" resultMap="orderItemResultMap">
+        SELECT oi.id, oi.quantity, oi.order_price, oi.created_at, oi.updated_at,
+        o.id as order_id, o.order_date, o.status,
+        p.id as product_id, p.name as product_name, p.price as product_price
+        FROM order_items oi
+        LEFT JOIN orders o ON oi.order_id = o.id
+        LEFT JOIN product p ON oi.product_id = p.id
+        WHERE oi.order_id = #{orderId} AND oi.product_id = #{productId}
+    </select>
+
+    <!-- 주문 ID로 주문 상품의 총 금액 계산 -->
+    <select id="calculateTotalPriceByOrderId" parameterType="long" resultType="int">
+        SELECT COALESCE(SUM(order_price * quantity), 0)
+        FROM order_items
+        WHERE order_id = #{orderId}
+    </select>
+
+    <!-- 모든 주문 상품 조회 -->
+    <select id="findAll" resultMap="orderItemResultMap">
+        SELECT oi.id, oi.quantity, oi.order_price, oi.created_at, oi.updated_at,
+        o.id as order_id, o.order_date, o.status,
+        p.id as product_id, p.name as product_name, p.price as product_price
+        FROM order_items oi
+        LEFT JOIN orders o ON oi.order_id = o.id
+        LEFT JOIN product p ON oi.product_id = p.id
+    </select>
+
+    <!-- 페이징된 주문 상품 조회 -->
+    <select id="findAllWithPaging" resultMap="orderItemResultMap">
+        SELECT oi.id, oi.quantity, oi.order_price, oi.created_at, oi.updated_at,
+        o.id as order_id, o.order_date, o.status,
+        p.id as product_id, p.name as product_name, p.price as product_price
+        FROM order_items oi
+        LEFT JOIN orders o ON oi.order_id = o.id
+        LEFT JOIN product p ON oi.product_id = p.id
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- 주문 ID로 페이징된 주문 상품 조회 -->
+    <select id="findByOrderIdWithPaging" resultMap="orderItemResultMap">
+        SELECT oi.id, oi.quantity, oi.order_price, oi.created_at, oi.updated_at,
+        o.id as order_id, o.order_date, o.status,
+        p.id as product_id, p.name as product_name, p.price as product_price
+        FROM order_items oi
+        LEFT JOIN orders o ON oi.order_id = o.id
+        LEFT JOIN product p ON oi.product_id = p.id
+        WHERE oi.order_id = #{orderId}
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- 특정 수량 이상의 주문 상품 조회 -->
+    <select id="findByQuantityGreaterThanEqual" parameterType="int" resultMap="orderItemResultMap">
+        SELECT oi.id, oi.quantity, oi.order_price, oi.created_at, oi.updated_at,
+        o.id as order_id, o.order_date, o.status,
+        p.id as product_id, p.name as product_name, p.price as product_price
+        FROM order_items oi
+        LEFT JOIN orders o ON oi.order_id = o.id
+        LEFT JOIN product p ON oi.product_id = p.id
+        WHERE oi.quantity >= #{quantity}
+    </select>
+
+    <!-- 특정 가격 범위의 주문 상품 조회 -->
+    <select id="findByPriceBetween" resultMap="orderItemResultMap">
+        SELECT oi.id, oi.quantity, oi.order_price, oi.created_at, oi.updated_at,
+        o.id as order_id, o.order_date, o.status,
+        p.id as product_id, p.name as product_name, p.price as product_price
+        FROM order_items oi
+        LEFT JOIN orders o ON oi.order_id = o.id
+        LEFT JOIN product p ON oi.product_id = p.id
+        WHERE oi.order_price BETWEEN #{minPrice} AND #{maxPrice}
+    </select>
+
+    <!-- 특정 상품의 총 주문 수량 계산 -->
+    <select id="calculateTotalQuantityForProduct" parameterType="long" resultType="int">
+        SELECT COALESCE(SUM(quantity), 0)
+        FROM order_items
+        WHERE product_id = #{productId}
+    </select>
+
+    <!-- 가장 많이 주문된 상품 목록 조회 -->
+    <select id="findMostOrderedProducts" parameterType="int" resultMap="orderItemResultMap">
+        SELECT p.id as product_id, p.name as product_name, p.price as product_price,
+        SUM(oi.quantity) as total_quantity,
+        oi.id, oi.quantity, oi.order_price, oi.created_at, oi.updated_at,
+        o.id as order_id, o.order_date, o.status
+        FROM order_items oi
+        LEFT JOIN product p ON oi.product_id = p.id
+        LEFT JOIN orders o ON oi.order_id = o.id
+        GROUP BY oi.product_id
+        ORDER BY total_quantity DESC
+        LIMIT #{limit}
+    </select>
+</mapper>

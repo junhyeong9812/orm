@@ -2,8 +2,9 @@ package com.benchmark.orm.domain.order.repository;
 
 import com.benchmark.orm.domain.order.dto.OrderSearchDto;
 import com.benchmark.orm.domain.order.entity.Order;
+import com.benchmark.orm.domain.order.entity.Order.OrderStatus;
 import com.benchmark.orm.domain.order.entity.QOrder;
-import com.benchmark.orm.domain.product.entity.QProduct;
+import com.benchmark.orm.domain.order.entity.QOrderItem;
 import com.benchmark.orm.domain.user.entity.QUser;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.OrderSpecifier;
@@ -15,6 +16,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -33,30 +35,6 @@ public class OrderRepositoryCustomImpl implements OrderRepositoryCustom {
     public OrderRepositoryCustomImpl(EntityManager entityManager, JPAQueryFactory queryFactory) {
         this.entityManager = entityManager;
         this.queryFactory = queryFactory;
-    }
-
-    @Override
-    public List<Order> findByUserId(Long userId) {
-        QOrder order = QOrder.order;
-        QUser user = QUser.user;
-
-        return queryFactory
-                .selectFrom(order)
-                .join(order.user, user)
-                .where(user.id.eq(userId))
-                .fetch();
-    }
-
-    @Override
-    public List<Order> findByProductId(Long productId) {
-        QOrder order = QOrder.order;
-        QProduct product = QProduct.product;
-
-        return queryFactory
-                .selectFrom(order)
-                .join(order.product, product)
-                .where(product.id.eq(productId))
-                .fetch();
     }
 
     @Override
@@ -108,6 +86,9 @@ public class OrderRepositoryCustomImpl implements OrderRepositoryCustom {
             } else if (orderItem.getProperty().equals("id")) {
                 orderSpecifier = orderItem.isAscending()
                         ? order.id.asc() : order.id.desc();
+            } else if (orderItem.getProperty().equals("status")) {
+                orderSpecifier = orderItem.isAscending()
+                        ? order.status.asc() : order.status.desc();
             } else {
                 // 기본값은 ID 기준 정렬
                 orderSpecifier = order.id.asc();
@@ -136,13 +117,13 @@ public class OrderRepositoryCustomImpl implements OrderRepositoryCustom {
     }
 
     @Override
-    public Optional<Order> findOrderWithProduct(Long orderId) {
+    public Optional<Order> findOrderWithOrderItems(Long orderId) {
         QOrder order = QOrder.order;
-        QProduct product = QProduct.product;
+        QOrderItem orderItem = QOrderItem.orderItem;
 
         Order result = queryFactory
                 .selectFrom(order)
-                .leftJoin(order.product, product).fetchJoin()
+                .leftJoin(order.orderItems, orderItem).fetchJoin()
                 .where(order.id.eq(orderId))
                 .fetchOne();
 
@@ -150,15 +131,15 @@ public class OrderRepositoryCustomImpl implements OrderRepositoryCustom {
     }
 
     @Override
-    public Optional<Order> findOrderWithUserAndProduct(Long orderId) {
+    public Optional<Order> findOrderWithUserAndOrderItems(Long orderId) {
         QOrder order = QOrder.order;
         QUser user = QUser.user;
-        QProduct product = QProduct.product;
+        QOrderItem orderItem = QOrderItem.orderItem;
 
         Order result = queryFactory
                 .selectFrom(order)
                 .leftJoin(order.user, user).fetchJoin()
-                .leftJoin(order.product, product).fetchJoin()
+                .leftJoin(order.orderItems, orderItem).fetchJoin()
                 .where(order.id.eq(orderId))
                 .fetchOne();
 
@@ -189,21 +170,56 @@ public class OrderRepositoryCustomImpl implements OrderRepositoryCustom {
     }
 
     @Override
+    public Page<Order> findByStatusWithPaging(OrderStatus status, Pageable pageable) {
+        QOrder order = QOrder.order;
+
+        List<Order> orders = queryFactory
+                .selectFrom(order)
+                .where(order.status.eq(status))
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+        // 전체 카운트 쿼리
+        long total = queryFactory
+                .selectFrom(order)
+                .where(order.status.eq(status))
+                .fetchCount();
+
+        return new PageImpl<>(orders, pageable, total);
+    }
+
+    @Override
+    public Page<Order> findByUserIdAndStatusWithPaging(Long userId, OrderStatus status, Pageable pageable) {
+        QOrder order = QOrder.order;
+
+        List<Order> orders = queryFactory
+                .selectFrom(order)
+                .where(order.user.id.eq(userId).and(order.status.eq(status)))
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+        // 전체 카운트 쿼리
+        long total = queryFactory
+                .selectFrom(order)
+                .where(order.user.id.eq(userId).and(order.status.eq(status)))
+                .fetchCount();
+
+        return new PageImpl<>(orders, pageable, total);
+    }
+
+    @Override
     public Page<Order> searchOrders(OrderSearchDto searchDto, Pageable pageable) {
         QOrder order = QOrder.order;
         QUser user = QUser.user;
-        QProduct product = QProduct.product;
+        QOrderItem orderItem = QOrderItem.orderItem;
 
         BooleanBuilder builder = new BooleanBuilder();
 
         // 사용자 ID 검색
         if (searchDto.getUserId() != null) {
             builder.and(order.user.id.eq(searchDto.getUserId()));
-        }
-
-        // 상품 ID 검색
-        if (searchDto.getProductId() != null) {
-            builder.and(order.product.id.eq(searchDto.getProductId()));
         }
 
         // 주문 날짜 범위 검색
@@ -242,30 +258,82 @@ public class OrderRepositoryCustomImpl implements OrderRepositoryCustom {
             });
         }
 
-        // 기본 정렬이 없는 경우 ID 기준으로 정렬
+        // 기본 정렬이 없는 경우 주문일자 기준으로 내림차순 정렬
         if (orderSpecifiers.isEmpty()) {
-            orderSpecifiers.add(order.id.asc());
+            orderSpecifiers.add(order.orderDate.desc());
         }
 
         // 검색 결과 조회
         List<Order> orders = queryFactory
                 .selectFrom(order)
                 .leftJoin(order.user, user)
-                .leftJoin(order.product, product)
+                .leftJoin(order.orderItems, orderItem)
                 .where(builder)
                 .orderBy(orderSpecifiers.toArray(new OrderSpecifier[0]))
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
+                .distinct()
                 .fetch();
 
         // 전체 카운트 쿼리
         long total = queryFactory
                 .selectFrom(order)
                 .leftJoin(order.user, user)
-                .leftJoin(order.product, product)
                 .where(builder)
+                .distinct()
                 .fetchCount();
 
         return new PageImpl<>(orders, pageable, total);
+    }
+
+    @Override
+    public List<Order> findOrdersContainingProduct(Long productId) {
+        QOrder order = QOrder.order;
+        QOrderItem orderItem = QOrderItem.orderItem;
+
+        return queryFactory
+                .selectFrom(order)
+                .join(order.orderItems, orderItem)
+                .where(orderItem.product.id.eq(productId))
+                .distinct()
+                .fetch();
+    }
+
+    @Override
+    public List<Order> findRecentOrders(int limit) {
+        QOrder order = QOrder.order;
+
+        return queryFactory
+                .selectFrom(order)
+                .orderBy(order.orderDate.desc())
+                .limit(limit)
+                .fetch();
+    }
+
+    @Override
+    @Transactional
+    public Order updateOrderStatus(Long orderId, OrderStatus status) {
+        QOrder order = QOrder.order;
+
+        // 주문 상태 업데이트
+        long updated = queryFactory
+                .update(order)
+                .set(order.status, status)
+                .where(order.id.eq(orderId))
+                .execute();
+
+        // 영속성 컨텍스트 초기화
+        entityManager.flush();
+        entityManager.clear();
+
+        // 업데이트된 주문 조회
+        if (updated > 0) {
+            return queryFactory
+                    .selectFrom(order)
+                    .where(order.id.eq(orderId))
+                    .fetchOne();
+        }
+
+        return null;
     }
 }
