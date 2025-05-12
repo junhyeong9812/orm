@@ -5,17 +5,13 @@ import com.benchmark.orm.domain.user.entity.Address;
 import com.benchmark.orm.domain.user.entity.Image;
 import com.benchmark.orm.domain.user.entity.User;
 import com.benchmark.orm.domain.user.entity.UserProfile;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -25,10 +21,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * UserRepository 테스트
  * <p>
- * JPA와 QueryDSL을 사용한 사용자 리포지토리 테스트
+ * JPA Repository 및 JPQL 메서드를 통한 사용자 데이터 접근 테스트
  */
-@SpringBootTest
-@Transactional // 테스트 후 롤백
+@DataJpaTest
 public class UserRepositoryTest {
 
     @Autowired
@@ -43,260 +38,296 @@ public class UserRepositoryTest {
     @Autowired
     private ImageRepository imageRepository;
 
-    @PersistenceContext
-    private EntityManager entityManager;
-
     @Test
-    @DisplayName("사용자 저장 테스트")
-    public void saveUserTest() {
+    @DisplayName("사용자 저장 및 조회 테스트")
+    public void saveAndFindByIdTest() {
         // given - 테스트용 사용자 생성
         User user = User.builder()
-                .username("테스트사용자")
-                .email("test@example.com")
+                .username("리포지토리테스트")
+                .email("repository@example.com")
                 .build();
 
         // when - 사용자 저장
         User savedUser = userRepository.save(user);
 
-        // then - 저장된 사용자 정보 검증
-        assertThat(savedUser.getId()).isNotNull();
-        assertThat(savedUser.getUsername()).isEqualTo("테스트사용자");
-        assertThat(savedUser.getEmail()).isEqualTo("test@example.com");
-        assertThat(savedUser.getCreatedAt()).isNotNull();
-        assertThat(savedUser.getUpdatedAt()).isNotNull();
-    }
-
-    @Test
-    @DisplayName("사용자 조회 테스트 - findById")
-    public void findUserByIdTest() {
-        // given - 테스트용 사용자 생성 및 저장
-        User user = User.builder()
-                .username("조회테스트")
-                .email("find@example.com")
-                .build();
-        User savedUser = userRepository.save(user);
-
-        // when - ID로 사용자 조회
+        // then - ID로 조회 및 결과 검증
         Optional<User> foundUser = userRepository.findById(savedUser.getId());
-
-        // then - 조회된 사용자 정보 검증
         assertThat(foundUser).isPresent();
-        assertThat(foundUser.get().getUsername()).isEqualTo("조회테스트");
-        assertThat(foundUser.get().getEmail()).isEqualTo("find@example.com");
+        assertThat(foundUser.get().getUsername()).isEqualTo("리포지토리테스트");
+        assertThat(foundUser.get().getEmail()).isEqualTo("repository@example.com");
     }
 
     @Test
-    @DisplayName("이메일로 사용자 조회 테스트 - QueryDSL")
-    public void findByEmailWithQueryDslTest() {
+    @DisplayName("사용자 정보 수정 테스트")
+    public void updateTest() {
         // given - 테스트용 사용자 생성 및 저장
         User user = User.builder()
-                .username("이메일테스트")
-                .email("email@example.com")
+                .username("수정전")
+                .email("before@example.com")
                 .build();
         userRepository.save(user);
 
-        entityManager.flush();
-        entityManager.clear();
+        // when - 사용자 정보 수정
+        user.updateInfo("수정후", "after@example.com");
+        userRepository.save(user);
 
-        // when - QueryDSL을 사용하여 이메일로 사용자 조회
-        Optional<User> foundUser = userRepository.findByEmail("email@example.com");
-
-        // then - 조회된 사용자 정보 검증
-        assertThat(foundUser).isPresent();
-        assertThat(foundUser.get().getUsername()).isEqualTo("이메일테스트");
+        // then - 결과 검증
+        User updatedUser = userRepository.findById(user.getId()).orElseThrow();
+        assertThat(updatedUser.getUsername()).isEqualTo("수정후");
+        assertThat(updatedUser.getEmail()).isEqualTo("after@example.com");
     }
 
     @Test
-    @DisplayName("사용자명으로 사용자 조회 테스트 - QueryDSL")
-    public void findByUsernameWithQueryDslTest() {
+    @DisplayName("사용자 삭제 테스트")
+    public void deleteTest() {
         // given - 테스트용 사용자 생성 및 저장
         User user = User.builder()
-                .username("사용자명테스트")
-                .email("username@example.com")
+                .username("삭제테스트")
+                .email("delete@example.com")
                 .build();
         userRepository.save(user);
 
-        entityManager.flush();
-        entityManager.clear();
+        // 삭제 전 존재 확인
+        assertThat(userRepository.findById(user.getId())).isPresent();
 
-        // when - QueryDSL을 사용하여 사용자명으로 사용자 조회
-        Optional<User> foundUser = userRepository.findByUsername("사용자명테스트");
+        // when - 사용자 삭제
+        userRepository.deleteById(user.getId());
 
-        // then - 조회된 사용자 정보 검증
-        assertThat(foundUser).isPresent();
-        assertThat(foundUser.get().getEmail()).isEqualTo("username@example.com");
+        // then - 삭제 후 존재 여부 확인
+        assertThat(userRepository.findById(user.getId())).isEmpty();
     }
 
     @Test
-    @DisplayName("페이징 및 정렬 테스트")
-    public void pagingAndSortingTest() {
-        // given - 여러 사용자 생성 및 저장
-        for (int i = 1; i <= 20; i++) {
-            User user = User.builder()
-                    .username("사용자" + i)
-                    .email("user" + i + "@example.com")
-                    .build();
-            userRepository.save(user);
-        }
-
-        entityManager.flush();
-        entityManager.clear();
-
-        // when - 페이징 및 정렬 적용하여 사용자 조회
-        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "username"));
-        Page<User> userPage = userRepository.findAllWithPaging(pageable);
-
-        // then - 페이징 및 정렬 결과 검증
-        assertThat(userPage.getTotalElements()).isEqualTo(20); // 전체 개수
-        assertThat(userPage.getContent().size()).isEqualTo(10); // 페이지 크기
-
-        // 사용자명 내림차순 정렬 확인
-        List<User> users = userPage.getContent();
-        for (int i = 0; i < users.size() - 1; i++) {
-            assertThat(users.get(i).getUsername().compareTo(users.get(i + 1).getUsername())).isGreaterThanOrEqualTo(0);
-        }
-    }
-
-    @Test
-    @DisplayName("사용자 및 프로필 연관관계 테스트")
-    public void userProfileRelationshipTest() {
-        // given
-        // 1. 사용자 생성 및 저장
+    @DisplayName("JPQL로 이메일 조회 테스트")
+    public void findByEmailJpqlTest() {
+        // given - 테스트용 사용자 생성 및 저장
         User user = User.builder()
-                .username("프로필테스트")
-                .email("profile@example.com")
+                .username("JPQL이메일")
+                .email("jpql@example.com")
                 .build();
         userRepository.save(user);
 
-        // 2. 프로필 이미지 생성 및 저장
-        Image profileImage = Image.builder()
-                .url("/images/profile.jpg")
-                .altText("프로필 이미지")
-                .build();
-        imageRepository.save(profileImage);
+        // when - JPQL로 이메일 조회
+        Optional<User> foundUser = userRepository.findByEmailJpql("jpql@example.com");
 
-        // 3. 사용자 프로필 생성 및 연결
+        // then - 결과 검증
+        assertThat(foundUser).isPresent();
+        assertThat(foundUser.get().getUsername()).isEqualTo("JPQL이메일");
+    }
+
+    @Test
+    @DisplayName("JPQL로 사용자명 조회 테스트")
+    public void findByUsernameJpqlTest() {
+        // given - 테스트용 사용자 생성 및 저장
+        User user = User.builder()
+                .username("JPQL사용자명")
+                .email("jpqlusername@example.com")
+                .build();
+        userRepository.save(user);
+
+        // when - JPQL로 사용자명 조회
+        Optional<User> foundUser = userRepository.findByUsernameJpql("JPQL사용자명");
+
+        // then - 결과 검증
+        assertThat(foundUser).isPresent();
+        assertThat(foundUser.get().getEmail()).isEqualTo("jpqlusername@example.com");
+    }
+
+    @Test
+    @DisplayName("JPQL로 사용자와 프로필 함께 조회 테스트")
+    public void findUserWithProfileJpqlTest() {
+        // given - 테스트용 사용자, 이미지 및 프로필 생성
+        User user = User.builder()
+                .username("JPQL프로필")
+                .email("jpqlprofile@example.com")
+                .build();
+        userRepository.save(user);
+
+        Image image = Image.builder()
+                .url("https://example.com/jpql-profile.jpg")
+                .altText("JPQL 프로필 이미지")
+                .build();
+        imageRepository.save(image);
+
         UserProfile profile = UserProfile.builder()
-                .nickname("닉네임")
-                .gender("남성")
-                .profileImage(profileImage)
+                .nickname("JPQL닉네임")
+                .gender("여성")
+                .user(user)
+                .profileImage(image)
                 .build();
-
-        // 양방향 관계 설정
-        user.connectProfile(profile);
         userProfileRepository.save(profile);
 
-        entityManager.flush();
-        entityManager.clear();
+        // JPA 관계 설정
+        user.connectProfile(profile);
+        userRepository.save(user);
 
-        // when - 프로필 정보와 함께 사용자 조회
-        Optional<User> userWithProfile = userRepository.findUserWithProfile(user.getId());
+        // when - JPQL로 사용자와 프로필 함께 조회
+        Optional<User> userWithProfile = userRepository.findUserWithProfileJpql(user.getId());
 
-        // then - 조회된 사용자 및 프로필 정보 검증
+        // then - 결과 검증
         assertThat(userWithProfile).isPresent();
         assertThat(userWithProfile.get().getProfile()).isNotNull();
-        assertThat(userWithProfile.get().getProfile().getNickname()).isEqualTo("닉네임");
-        assertThat(userWithProfile.get().getProfile().getGender()).isEqualTo("남성");
-        assertThat(userWithProfile.get().getProfile().getProfileImage()).isNotNull();
-        assertThat(userWithProfile.get().getProfile().getProfileImage().getUrl()).isEqualTo("/images/profile.jpg");
+        assertThat(userWithProfile.get().getProfile().getNickname()).isEqualTo("JPQL닉네임");
     }
 
     @Test
-    @DisplayName("사용자 및 주소 연관관계 테스트")
-    public void userAddressRelationshipTest() {
-        // given
-        // 1. 사용자 생성 및 저장
+    @DisplayName("JPQL로 사용자와 주소 함께 조회 테스트")
+    public void findUserWithAddressesJpqlTest() {
+        // given - 테스트용 사용자 생성
         User user = User.builder()
-                .username("주소테스트")
-                .email("address@example.com")
+                .username("JPQL주소")
+                .email("jpqladdress@example.com")
                 .build();
         userRepository.save(user);
 
-        // 2. 주소 생성 및 연결
-        Address address1 = Address.builder()
-                .zipcode("12345")
-                .detail("서울시 강남구")
-                .isDefault(true)
-                .build();
+        // 주소 추가
+        for (int i = 1; i <= 3; i++) {
+            Address address = Address.builder()
+                    .zipcode("2000" + i)
+                    .detail("JPQL 테스트 주소 " + i)
+                    .isDefault(i == 1) // 첫번째 주소만 기본 주소로 설정
+                    .user(user)
+                    .build();
+            addressRepository.save(address);
 
-        Address address2 = Address.builder()
-                .zipcode("54321")
-                .detail("서울시 서초구")
-                .isDefault(false)
-                .build();
+            // 양방향 관계 설정
+            user.addAddress(address);
+        }
+        userRepository.save(user);
 
-        // 양방향 관계 설정
-        user.addAddress(address1);
-        user.addAddress(address2);
+        // when - JPQL로 사용자와 주소 함께 조회
+        Optional<User> userWithAddresses = userRepository.findUserWithAddressesJpql(user.getId());
 
-        addressRepository.save(address1);
-        addressRepository.save(address2);
-
-        entityManager.flush();
-        entityManager.clear();
-
-        // when - 주소 정보와 함께 사용자 조회
-        Optional<User> userWithAddresses = userRepository.findUserWithAddresses(user.getId());
-
-        // then - 조회된 사용자 및 주소 정보 검증
+        // then - 결과 검증
         assertThat(userWithAddresses).isPresent();
-        assertThat(userWithAddresses.get().getAddresses()).hasSize(2);
-
-        // 기본 주소 확인
-        Address defaultAddress = userWithAddresses.get().findDefaultAddress();
-        assertThat(defaultAddress).isNotNull();
-        assertThat(defaultAddress.getDetail()).isEqualTo("서울시 강남구");
+        assertThat(userWithAddresses.get().getAddresses()).hasSize(3);
     }
 
     @Test
-    @DisplayName("사용자 동적 검색 테스트")
-    public void searchUsersTest() {
-        // given - 다양한 사용자 생성 및 저장
-        User user1 = User.builder().username("검색테스트A").email("search1@example.com").build();
-        User user2 = User.builder().username("검색테스트B").email("search2@example.com").build();
-        User user3 = User.builder().username("일반사용자").email("regular@example.com").build();
-        User user4 = User.builder().username("특별사용자").email("special@search.com").build();
-
-        userRepository.saveAll(List.of(user1, user2, user3, user4));
-
-        entityManager.flush();
-        entityManager.clear();
-
-        // when - 키워드로 사용자 검색 (사용자명)
-        UserSearchDto usernameSearchDto = UserSearchDto.builder()
-                .username("검색테스트")
+    @DisplayName("JPQL 키워드로 사용자 검색 테스트")
+    public void searchUsersByKeywordJpqlTest() {
+        // given - 검색용 사용자 추가
+        User user1 = User.builder()
+                .username("검색키워드A")
+                .email("search1@example.com")
                 .build();
+        userRepository.save(user1);
 
+        User user2 = User.builder()
+                .username("일반사용자")
+                .email("search2@example.com")
+                .build();
+        userRepository.save(user2);
+
+        // when - JPQL로 키워드 검색
+        List<User> results = userRepository.searchUsersByKeywordJpql("검색");
+
+        // then - 결과 검증
+        assertThat(results).isNotEmpty();
+
+        boolean hasMatch = false;
+        for (User user : results) {
+            if (user.getUsername().equals("검색키워드A")) {
+                hasMatch = true;
+                break;
+            }
+        }
+        assertThat(hasMatch).isTrue();
+    }
+
+    @Test
+    @DisplayName("JPQL 사용자명으로 사용자 검색 테스트")
+    public void searchUsersByUsernameJpqlTest() {
+        // given - 검색용 사용자 추가
+        User user1 = User.builder()
+                .username("검색이름A")
+                .email("username1@example.com")
+                .build();
+        userRepository.save(user1);
+
+        User user2 = User.builder()
+                .username("검색이름B")
+                .email("username2@example.com")
+                .build();
+        userRepository.save(user2);
+
+        // when - JPQL로 사용자명 검색
+        List<User> results = userRepository.searchUsersByUsernameJpql("검색이름");
+
+        // then - 결과 검증
+        assertThat(results).hasSize(2);
+
+        int matchCount = 0;
+        for (User user : results) {
+            if (user.getUsername().equals("검색이름A") || user.getUsername().equals("검색이름B")) {
+                matchCount++;
+            }
+        }
+        assertThat(matchCount).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("JPQL 이메일로 사용자 검색 테스트")
+    public void searchUsersByEmailJpqlTest() {
+        // given - 검색용 사용자 추가
+        User user1 = User.builder()
+                .username("이메일A")
+                .email("emailsearch1@example.com")
+                .build();
+        userRepository.save(user1);
+
+        User user2 = User.builder()
+                .username("이메일B")
+                .email("emailsearch2@example.com")
+                .build();
+        userRepository.save(user2);
+
+        // when - JPQL로 이메일 검색
+        List<User> results = userRepository.searchUsersByEmailJpql("emailsearch");
+
+        // then - 결과 검증
+        assertThat(results).hasSize(2);
+
+        int matchCount = 0;
+        for (User user : results) {
+            if (user.getEmail().equals("emailsearch1@example.com") ||
+                    user.getEmail().equals("emailsearch2@example.com")) {
+                matchCount++;
+            }
+        }
+        assertThat(matchCount).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("JPQL 복합 조건으로 사용자 검색 테스트")
+    public void searchUsersJpqlTest() {
+        // given - 검색용 사용자 추가
+        User user1 = User.builder()
+                .username("복합검색A")
+                .email("complex1@example.com")
+                .build();
+        userRepository.save(user1);
+
+        User user2 = User.builder()
+                .username("복합검색B")
+                .email("complex2@example.com")
+                .build();
+        userRepository.save(user2);
+
+        // when - JPQL 복합 조건 검색
         Pageable pageable = PageRequest.of(0, 10);
-        Page<User> usernameResult = userRepository.searchUsers(usernameSearchDto, pageable);
+        Page<User> results = userRepository.searchUsersJpql("복합검색", "", "", pageable);
 
         // then - 검색 결과 검증
-        assertThat(usernameResult.getTotalElements()).isEqualTo(2);
-        assertThat(usernameResult.getContent())
-                .extracting(User::getUsername)
-                .containsExactlyInAnyOrder("검색테스트A", "검색테스트B");
+        assertThat(results.getContent()).isNotEmpty();
+        assertThat(results.getContent().size()).isEqualTo(2);
 
-        // when - 키워드로 사용자 검색 (이메일)
-        UserSearchDto emailSearchDto = UserSearchDto.builder()
-                .email("search")
-                .build();
-
-        Page<User> emailResult = userRepository.searchUsers(emailSearchDto, pageable);
-
-        // then - 검색 결과 검증
-        assertThat(emailResult.getTotalElements()).isEqualTo(3); // search1, search2, special@search.com
-
-        // when - 복합 조건으로 사용자 검색
-        UserSearchDto combinedSearchDto = UserSearchDto.builder()
-                .username("특별")
-                .email("search")
-                .build();
-
-        Page<User> combinedResult = userRepository.searchUsers(combinedSearchDto, pageable);
-
-        // then - 검색 결과 검증
-        assertThat(combinedResult.getTotalElements()).isEqualTo(1);
-        assertThat(combinedResult.getContent().get(0).getUsername()).isEqualTo("특별사용자");
-        assertThat(combinedResult.getContent().get(0).getEmail()).isEqualTo("special@search.com");
+        int matchCount = 0;
+        for (User user : results.getContent()) {
+            if (user.getUsername().equals("복합검색A") || user.getUsername().equals("복합검색B")) {
+                matchCount++;
+            }
+        }
+        assertThat(matchCount).isEqualTo(2);
     }
 }

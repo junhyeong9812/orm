@@ -3,6 +3,7 @@ package com.benchmark.orm.domain.order.controller;
 import com.benchmark.orm.domain.order.dto.OrderRequestDto;
 import com.benchmark.orm.domain.order.dto.OrderResponseDto;
 import com.benchmark.orm.domain.order.dto.OrderSearchDto;
+import com.benchmark.orm.domain.order.entity.Order;
 import com.benchmark.orm.domain.order.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -110,16 +111,6 @@ public class OrderController {
     @GetMapping("/querydsl/user/{userId}")
     public ResponseEntity<List<OrderResponseDto>> getOrdersByUserIdQueryDsl(@PathVariable Long userId) {
         return ResponseEntity.ok(orderService.findOrdersByUserIdQueryDsl(userId));
-    }
-
-    /**
-     * JPQL로 상품 ID별 주문 조회
-     * @param productId 상품 ID
-     * @return 주문 목록
-     */
-    @GetMapping("/jpql/product/{productId}")
-    public ResponseEntity<List<OrderResponseDto>> getOrdersByProductIdJpql(@PathVariable Long productId) {
-        return ResponseEntity.ok(orderService.findOrdersByProductIdJpql(productId));
     }
 
     /**
@@ -312,49 +303,49 @@ public class OrderController {
     }
 
     /**
-     * JPQL로 상품 정보와 함께 주문 조회
+     * JPQL로 주문 상품 정보와 함께 주문 조회
      * @param id 주문 ID
-     * @return 상품 정보가 포함된 주문 정보
+     * @return 주문 상품 정보가 포함된 주문 정보
      */
-    @GetMapping("/jpql/{id}/with-product")
-    public ResponseEntity<OrderResponseDto> getOrderWithProductJpql(@PathVariable Long id) {
-        return orderService.findOrderWithProductJpql(id)
+    @GetMapping("/jpql/{id}/with-items")
+    public ResponseEntity<OrderResponseDto> getOrderWithOrderItemsJpql(@PathVariable Long id) {
+        return orderService.findOrderWithOrderItemsJpql(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     /**
-     * QueryDSL로 상품 정보와 함께 주문 조회
+     * QueryDSL로 주문 상품 정보와 함께 주문 조회
      * @param id 주문 ID
-     * @return 상품 정보가 포함된 주문 정보
+     * @return 주문 상품 정보가 포함된 주문 정보
      */
-    @GetMapping("/querydsl/{id}/with-product")
-    public ResponseEntity<OrderResponseDto> getOrderWithProductQueryDsl(@PathVariable Long id) {
-        return orderService.findOrderWithProductQueryDsl(id)
+    @GetMapping("/querydsl/{id}/with-items")
+    public ResponseEntity<OrderResponseDto> getOrderWithOrderItemsQueryDsl(@PathVariable Long id) {
+        return orderService.findOrderWithOrderItemsQueryDsl(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     /**
-     * JPQL로 사용자 및 상품 정보와 함께 주문 조회
+     * JPQL로 사용자 및 주문 상품 정보와 함께 주문 조회
      * @param id 주문 ID
-     * @return 사용자 및 상품 정보가 포함된 주문 정보
+     * @return 사용자 및 주문 상품 정보가 포함된 주문 정보
      */
-    @GetMapping("/jpql/{id}/with-user-product")
-    public ResponseEntity<OrderResponseDto> getOrderWithUserAndProductJpql(@PathVariable Long id) {
-        return orderService.findOrderWithUserAndProductJpql(id)
+    @GetMapping("/jpql/{id}/with-user-items")
+    public ResponseEntity<OrderResponseDto> getOrderWithUserAndOrderItemsJpql(@PathVariable Long id) {
+        return orderService.findOrderWithUserAndOrderItemsJpql(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     /**
-     * QueryDSL로 사용자 및 상품 정보와 함께 주문 조회
+     * QueryDSL로 사용자 및 주문 상품 정보와 함께 주문 조회
      * @param id 주문 ID
-     * @return 사용자 및 상품 정보가 포함된 주문 정보
+     * @return 사용자 및 주문 상품 정보가 포함된 주문 정보
      */
-    @GetMapping("/querydsl/{id}/with-user-product")
-    public ResponseEntity<OrderResponseDto> getOrderWithUserAndProductQueryDsl(@PathVariable Long id) {
-        return orderService.findOrderWithUserAndProductQueryDsl(id)
+    @GetMapping("/querydsl/{id}/with-user-items")
+    public ResponseEntity<OrderResponseDto> getOrderWithUserAndOrderItemsQueryDsl(@PathVariable Long id) {
+        return orderService.findOrderWithUserAndOrderItemsQueryDsl(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -504,5 +495,34 @@ public class OrderController {
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    /**
+     * 주문 상태 변경 (QueryDSL 사용)
+     * @param id 주문 ID
+     * @param status 변경할 상태
+     * @return 변경된 주문 정보
+     */
+    @PatchMapping("/querydsl/{id}/status")
+    public ResponseEntity<OrderResponseDto> updateOrderStatus(
+            @PathVariable Long id,
+            @RequestParam Order.OrderStatus status) {
+        try {
+            OrderResponseDto updatedOrder = orderService.updateOrderStatus(id, status);
+            return ResponseEntity.ok(updatedOrder);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    /**
+     * 최근 주문 목록 조회 (QueryDSL 사용)
+     * @param limit 최대 개수
+     * @return 최근 주문 목록
+     */
+    @GetMapping("/querydsl/recent")
+    public ResponseEntity<List<OrderResponseDto>> getRecentOrders(
+            @RequestParam(defaultValue = "10") int limit) {
+        return ResponseEntity.ok(orderService.findRecentOrders(limit));
     }
 }

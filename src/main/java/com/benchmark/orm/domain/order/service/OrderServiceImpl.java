@@ -4,7 +4,10 @@ import com.benchmark.orm.domain.order.dto.OrderRequestDto;
 import com.benchmark.orm.domain.order.dto.OrderResponseDto;
 import com.benchmark.orm.domain.order.dto.OrderSearchDto;
 import com.benchmark.orm.domain.order.entity.Order;
+import com.benchmark.orm.domain.order.entity.OrderItem;
+import com.benchmark.orm.domain.order.mapper.OrderItemMapper;
 import com.benchmark.orm.domain.order.mapper.OrderMapper;
+import com.benchmark.orm.domain.order.repository.OrderItemRepository;
 import com.benchmark.orm.domain.order.repository.OrderRepository;
 import com.benchmark.orm.domain.product.entity.Product;
 import com.benchmark.orm.domain.product.repository.ProductRepository;
@@ -19,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -32,47 +36,72 @@ import java.util.stream.Collectors;
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
     private final OrderMapper orderMapper;
+    private final OrderItemMapper orderItemMapper;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
 
     @Override
     @Transactional
     public OrderResponseDto saveOrderJpa(OrderRequestDto orderDto) {
-        // 사용자와 상품 엔티티 조회
+        // 사용자 엔티티 조회
         User user = userRepository.findById(orderDto.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + orderDto.getUserId()));
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다. ID: " + orderDto.getUserId()));
 
-        Product product = productRepository.findById(orderDto.getProductId())
-                .orElseThrow(() -> new RuntimeException("Product not found with id: " + orderDto.getProductId()));
+        // 주문 엔티티 생성
+        Order order = orderDto.toEntity(user);
 
-        // DTO를 엔티티로 변환
-        Order order = orderDto.toEntity(user, product);
+        // 주문 상품 처리
+        if (orderDto.getOrderItems() != null && !orderDto.getOrderItems().isEmpty()) {
+            for (OrderRequestDto.OrderItemRequestDto itemDto : orderDto.getOrderItems()) {
+                // 상품 조회
+                Product product = productRepository.findById(itemDto.getProductId())
+                        .orElseThrow(() -> new RuntimeException("상품을 찾을 수 없습니다. ID: " + itemDto.getProductId()));
 
-        // 엔티티 저장
+                // 주문 상품 생성 및 관계 설정
+                OrderItem orderItem = itemDto.toEntity(product);
+                order.addOrderItem(orderItem);
+            }
+        }
+
+        // 주문 저장
         Order savedOrder = orderRepository.save(order);
 
         // 응답 DTO 반환
-        return OrderResponseDto.fromEntityWithUserAndProduct(savedOrder);
+        return OrderResponseDto.fromEntityWithUserAndOrderItems(savedOrder);
     }
 
     @Override
     @Transactional
     public String saveOrderMyBatis(OrderRequestDto orderDto) {
-        // 사용자와 상품 엔티티 조회
+        // 사용자 엔티티 조회
         User user = userRepository.findById(orderDto.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + orderDto.getUserId()));
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다. ID: " + orderDto.getUserId()));
 
-        Product product = productRepository.findById(orderDto.getProductId())
-                .orElseThrow(() -> new RuntimeException("Product not found with id: " + orderDto.getProductId()));
+        // 주문 엔티티 생성
+        Order order = orderDto.toEntity(user);
 
-        // DTO를 엔티티로 변환
-        Order order = orderDto.toEntity(user, product);
-
-        // MyBatis를 통해 엔티티 저장
+        // MyBatis를 통해 주문 저장
         orderMapper.insert(order);
 
-        return "Order created successfully with MyBatis";
+        // 주문 상품 처리
+        if (orderDto.getOrderItems() != null && !orderDto.getOrderItems().isEmpty()) {
+            for (OrderRequestDto.OrderItemRequestDto itemDto : orderDto.getOrderItems()) {
+                // 상품 조회
+                Product product = productRepository.findById(itemDto.getProductId())
+                        .orElseThrow(() -> new RuntimeException("상품을 찾을 수 없습니다. ID: " + itemDto.getProductId()));
+
+                // 주문 상품 생성
+                OrderItem orderItem = itemDto.toEntity(product);
+                orderItem.assignOrder(order);
+
+                // MyBatis를 통해 주문 상품 저장
+                orderItemMapper.insert(orderItem);
+            }
+        }
+
+        return "주문이 MyBatis를 통해 성공적으로 생성되었습니다.";
     }
 
     @Override
@@ -103,7 +132,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public List<OrderResponseDto> findOrdersByUserIdJpql(Long userId) {
-        return orderRepository.findByUserIdJpql(userId).stream()
+        return orderRepository.findByUserId(userId).stream()
                 .map(OrderResponseDto::fromEntity)
                 .collect(Collectors.toList());
     }
@@ -116,22 +145,15 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public List<OrderResponseDto> findOrdersByProductIdJpql(Long productId) {
-        return orderRepository.findByProductIdJpql(productId).stream()
-                .map(OrderResponseDto::fromEntity)
-                .collect(Collectors.toList());
-    }
-
-    @Override
     public List<OrderResponseDto> findOrdersByProductIdQueryDsl(Long productId) {
-        return orderRepository.findByProductId(productId).stream()
+        return orderRepository.findOrdersContainingProduct(productId).stream()
                 .map(OrderResponseDto::fromEntity)
                 .collect(Collectors.toList());
     }
 
     @Override
     public List<OrderResponseDto> findOrdersByOrderDateBetweenJpql(LocalDateTime startDate, LocalDateTime endDate) {
-        return orderRepository.findByOrderDateBetweenJpql(startDate, endDate).stream()
+        return orderRepository.findByOrderDateBetween(startDate, endDate).stream()
                 .map(OrderResponseDto::fromEntity)
                 .collect(Collectors.toList());
     }
@@ -224,27 +246,27 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public Optional<OrderResponseDto> findOrderWithProductJpql(Long orderId) {
-        return orderRepository.findOrderWithProductJpql(orderId)
-                .map(OrderResponseDto::fromEntityWithProduct);
+    public Optional<OrderResponseDto> findOrderWithOrderItemsJpql(Long orderId) {
+        return orderRepository.findOrderWithOrderItemsJpql(orderId)
+                .map(OrderResponseDto::fromEntityWithOrderItems);
     }
 
     @Override
-    public Optional<OrderResponseDto> findOrderWithProductQueryDsl(Long orderId) {
-        return orderRepository.findOrderWithProduct(orderId)
-                .map(OrderResponseDto::fromEntityWithProduct);
+    public Optional<OrderResponseDto> findOrderWithOrderItemsQueryDsl(Long orderId) {
+        return orderRepository.findOrderWithOrderItems(orderId)
+                .map(OrderResponseDto::fromEntityWithOrderItems);
     }
 
     @Override
-    public Optional<OrderResponseDto> findOrderWithUserAndProductJpql(Long orderId) {
-        return orderRepository.findOrderWithUserAndProductJpql(orderId)
-                .map(OrderResponseDto::fromEntityWithUserAndProduct);
+    public Optional<OrderResponseDto> findOrderWithUserAndOrderItemsJpql(Long orderId) {
+        return orderRepository.findOrderWithUserAndOrderItemsJpql(orderId)
+                .map(OrderResponseDto::fromEntityWithUserAndOrderItems);
     }
 
     @Override
-    public Optional<OrderResponseDto> findOrderWithUserAndProductQueryDsl(Long orderId) {
-        return orderRepository.findOrderWithUserAndProduct(orderId)
-                .map(OrderResponseDto::fromEntityWithUserAndProduct);
+    public Optional<OrderResponseDto> findOrderWithUserAndOrderItemsQueryDsl(Long orderId) {
+        return orderRepository.findOrderWithUserAndOrderItems(orderId)
+                .map(OrderResponseDto::fromEntityWithUserAndOrderItems);
     }
 
     @Override
@@ -263,7 +285,7 @@ public class OrderServiceImpl implements OrderService {
         // JPQL 방식으로 검색
         Page<Order> orderPage = orderRepository.searchOrdersJpql(
                 searchDto.getUserId(),
-                searchDto.getProductId(),
+                searchDto.getStatus(),
                 searchDto.getStartDate(),
                 searchDto.getEndDate(),
                 pageable);
@@ -306,66 +328,89 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponseDto updateOrderJpa(Long id, OrderRequestDto orderDto) {
-        return orderRepository.findById(id)
-                .map(existingOrder -> {
-                    // 사용자와 상품 엔티티 조회
-                    User user = userRepository.findById(orderDto.getUserId())
-                            .orElseThrow(() -> new RuntimeException("User not found with id: " + orderDto.getUserId()));
+        // 기존 주문 조회
+        Order existingOrder = orderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다. ID: " + id));
 
-                    Product product = productRepository.findById(orderDto.getProductId())
-                            .orElseThrow(() -> new RuntimeException("Product not found with id: " + orderDto.getProductId()));
+        // 사용자 엔티티 조회
+        User user = userRepository.findById(orderDto.getUserId())
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다. ID: " + orderDto.getUserId()));
 
-                    // DTO를 엔티티로 변환 (ID 설정)
-                    Order updatedOrder = orderDto.toEntity(user, product);
+        // 기존 주문 상품 제거 (영속성 전이로 자동 삭제)
+        // 주문 엔티티가 orderItems의 변경을 관리하므로 여기서는 관계만 제거
+        List<OrderItem> existingOrderItems = new ArrayList<>(existingOrder.getOrderItems());
+        for (OrderItem item : existingOrderItems) {
+            existingOrder.removeOrderItem(item);
+        }
 
-                    // ID 설정을 위한 Reflection 사용
-                    try {
-                        java.lang.reflect.Field idField = Order.class.getDeclaredField("id");
-                        idField.setAccessible(true);
-                        idField.set(updatedOrder, id);
-                    } catch (Exception e) {
-                        throw new RuntimeException("Failed to set Order ID", e);
-                    }
+        // 주문 기본 정보 업데이트
+        existingOrder.changeUser(user)
+                .changeOrderDate(orderDto.getOrderDate() != null ? orderDto.getOrderDate() : existingOrder.getOrderDate())
+                .changeStatus(orderDto.getStatus() != null ? orderDto.getStatus() : existingOrder.getStatus());
 
-                    // 업데이트된 주문 저장
-                    Order savedOrder = orderRepository.save(updatedOrder);
-                    return OrderResponseDto.fromEntityWithUserAndProduct(savedOrder);
-                })
-                .orElseThrow(() -> new RuntimeException("Order not found with id: " + id));
+        // 새 주문 상품 추가
+        if (orderDto.getOrderItems() != null && !orderDto.getOrderItems().isEmpty()) {
+            for (OrderRequestDto.OrderItemRequestDto itemDto : orderDto.getOrderItems()) {
+                // 상품 조회
+                Product product = productRepository.findById(itemDto.getProductId())
+                        .orElseThrow(() -> new RuntimeException("상품을 찾을 수 없습니다. ID: " + itemDto.getProductId()));
+
+                // 주문 상품 생성 및 관계 설정
+                OrderItem orderItem = itemDto.toEntity(product);
+                existingOrder.addOrderItem(orderItem);
+            }
+        }
+
+        // 주문 저장
+        Order updatedOrder = orderRepository.save(existingOrder);
+
+        return OrderResponseDto.fromEntityWithUserAndOrderItems(updatedOrder);
     }
 
     @Override
     @Transactional
     public String updateOrderMyBatis(Long id, OrderRequestDto orderDto) {
+        // 기존 주문 조회
         Order existingOrder = orderMapper.findById(id);
-
         if (existingOrder == null) {
-            throw new RuntimeException("Order not found with id: " + id);
+            throw new RuntimeException("주문을 찾을 수 없습니다. ID: " + id);
         }
 
-        // 사용자와 상품 엔티티 조회
+        // 사용자 엔티티 조회
         User user = userRepository.findById(orderDto.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + orderDto.getUserId()));
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다. ID: " + orderDto.getUserId()));
 
-        Product product = productRepository.findById(orderDto.getProductId())
-                .orElseThrow(() -> new RuntimeException("Product not found with id: " + orderDto.getProductId()));
-
-        // DTO를 엔티티로 변환 (ID 설정)
-        Order updatedOrder = orderDto.toEntity(user, product);
-
-        // ID 설정을 위한 Reflection 사용
-        try {
-            java.lang.reflect.Field idField = Order.class.getDeclaredField("id");
-            idField.setAccessible(true);
-            idField.set(updatedOrder, id);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to set Order ID", e);
-        }
+        // 주문 기본 정보 업데이트
+        Order updatedOrder = Order.builder()
+                .id(id)
+                .user(user)
+                .orderDate(orderDto.getOrderDate() != null ? orderDto.getOrderDate() : existingOrder.getOrderDate())
+                .status(orderDto.getStatus() != null ? orderDto.getStatus() : existingOrder.getStatus())
+                .build();
 
         // MyBatis를 통해 주문 업데이트
         orderMapper.update(updatedOrder);
 
-        return "Order updated successfully with MyBatis";
+        // 기존 주문 상품 삭제 (MyBatis에서는 수동으로 관계 처리 필요)
+        orderItemMapper.deleteByOrderId(id);
+
+        // 새 주문 상품 추가
+        if (orderDto.getOrderItems() != null && !orderDto.getOrderItems().isEmpty()) {
+            for (OrderRequestDto.OrderItemRequestDto itemDto : orderDto.getOrderItems()) {
+                // 상품 조회
+                Product product = productRepository.findById(itemDto.getProductId())
+                        .orElseThrow(() -> new RuntimeException("상품을 찾을 수 없습니다. ID: " + itemDto.getProductId()));
+
+                // 주문 상품 생성
+                OrderItem orderItem = itemDto.toEntity(product);
+                orderItem.assignOrder(updatedOrder);
+
+                // MyBatis를 통해 주문 상품 저장
+                orderItemMapper.insert(orderItem);
+            }
+        }
+
+        return "주문이 MyBatis를 통해 성공적으로 업데이트되었습니다.";
     }
 
     @Override
@@ -374,21 +419,42 @@ public class OrderServiceImpl implements OrderService {
         return orderRepository.findById(id)
                 .map(order -> {
                     orderRepository.deleteById(id);
-                    return "Order deleted successfully with JPA";
+                    return "주문이 JPA를 통해 성공적으로 삭제되었습니다.";
                 })
-                .orElseThrow(() -> new RuntimeException("Order not found with id: " + id));
+                .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다. ID: " + id));
     }
 
     @Override
     @Transactional
     public String deleteOrderMyBatis(Long id) {
         Order existingOrder = orderMapper.findById(id);
-
         if (existingOrder == null) {
-            throw new RuntimeException("Order not found with id: " + id);
+            throw new RuntimeException("주문을 찾을 수 없습니다. ID: " + id);
         }
 
+        // 주문 상품 삭제 (MyBatis에서는 수동으로 관계 처리 필요)
+        orderItemMapper.deleteByOrderId(id);
+
+        // 주문 삭제
         orderMapper.deleteById(id);
-        return "Order deleted successfully with MyBatis";
+
+        return "주문이 MyBatis를 통해 성공적으로 삭제되었습니다.";
+    }
+
+    @Override
+    @Transactional
+    public OrderResponseDto updateOrderStatus(Long orderId, Order.OrderStatus status) {
+        Order updatedOrder = orderRepository.updateOrderStatus(orderId, status);
+        if (updatedOrder == null) {
+            throw new RuntimeException("주문을 찾을 수 없습니다. ID: " + orderId);
+        }
+        return OrderResponseDto.fromEntity(updatedOrder);
+    }
+
+    @Override
+    public List<OrderResponseDto> findRecentOrders(int limit) {
+        return orderRepository.findRecentOrders(limit).stream()
+                .map(OrderResponseDto::fromEntity)
+                .collect(Collectors.toList());
     }
 }

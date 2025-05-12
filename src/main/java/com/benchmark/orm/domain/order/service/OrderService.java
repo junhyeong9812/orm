@@ -3,6 +3,7 @@ package com.benchmark.orm.domain.order.service;
 import com.benchmark.orm.domain.order.dto.OrderRequestDto;
 import com.benchmark.orm.domain.order.dto.OrderResponseDto;
 import com.benchmark.orm.domain.order.dto.OrderSearchDto;
+import com.benchmark.orm.domain.order.entity.Order;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -71,14 +72,7 @@ public interface OrderService {
     List<OrderResponseDto> findOrdersByUserIdQueryDsl(Long userId);
 
     /**
-     * JPQL을 사용하여 상품 ID로 주문 조회
-     * @param productId 상품 ID
-     * @return 주문 응답 DTO 리스트
-     */
-    List<OrderResponseDto> findOrdersByProductIdJpql(Long productId);
-
-    /**
-     * QueryDSL을 사용하여 상품 ID로 주문 조회
+     * 상품 ID로 주문을 조회 (QueryDSL 사용)
      * @param productId 상품 ID
      * @return 주문 응답 DTO 리스트
      */
@@ -176,32 +170,32 @@ public interface OrderService {
     Optional<OrderResponseDto> findOrderWithUserQueryDsl(Long orderId);
 
     /**
-     * JPQL을 사용하여 상품 정보와 함께 주문 조회
+     * JPQL을 사용하여 주문 상품 정보와 함께 주문 조회
      * @param orderId 주문 ID
      * @return 주문 응답 DTO Optional 객체
      */
-    Optional<OrderResponseDto> findOrderWithProductJpql(Long orderId);
+    Optional<OrderResponseDto> findOrderWithOrderItemsJpql(Long orderId);
 
     /**
-     * QueryDSL을 사용하여 상품 정보와 함께 주문 조회
+     * QueryDSL을 사용하여 주문 상품 정보와 함께 주문 조회
      * @param orderId 주문 ID
      * @return 주문 응답 DTO Optional 객체
      */
-    Optional<OrderResponseDto> findOrderWithProductQueryDsl(Long orderId);
+    Optional<OrderResponseDto> findOrderWithOrderItemsQueryDsl(Long orderId);
 
     /**
-     * JPQL을 사용하여 사용자 및 상품 정보와 함께 주문 조회
+     * JPQL을 사용하여 사용자 및 주문 상품 정보와 함께 주문 조회
      * @param orderId 주문 ID
      * @return 주문 응답 DTO Optional 객체
      */
-    Optional<OrderResponseDto> findOrderWithUserAndProductJpql(Long orderId);
+    Optional<OrderResponseDto> findOrderWithUserAndOrderItemsJpql(Long orderId);
 
     /**
-     * QueryDSL을 사용하여 사용자 및 상품 정보와 함께 주문 조회
+     * QueryDSL을 사용하여 사용자 및 주문 상품 정보와 함께 주문 조회
      * @param orderId 주문 ID
      * @return 주문 응답 DTO Optional 객체
      */
-    Optional<OrderResponseDto> findOrderWithUserAndProductQueryDsl(Long orderId);
+    Optional<OrderResponseDto> findOrderWithUserAndOrderItemsQueryDsl(Long orderId);
 
     /**
      * QueryDSL을 사용하여 사용자 ID로 주문을 페이징하여 조회
@@ -268,4 +262,19 @@ public interface OrderService {
      * @return 결과 메시지
      */
     String deleteOrderMyBatis(Long id);
+
+    /**
+     * 주문 상태 변경 (QueryDSL 사용)
+     * @param orderId 주문 ID
+     * @param status 변경할 상태
+     * @return 변경된 주문 응답 DTO
+     */
+    OrderResponseDto updateOrderStatus(Long orderId, Order.OrderStatus status);
+
+    /**
+     * 최근 주문 목록 조회 (QueryDSL 사용)
+     * @param limit 최대 개수
+     * @return 주문 응답 DTO 리스트
+     */
+    List<OrderResponseDto> findRecentOrders(int limit);
 }
