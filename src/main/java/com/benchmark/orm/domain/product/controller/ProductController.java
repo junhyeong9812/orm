@@ -406,11 +406,53 @@ public class ProductController {
     /**
      * 검색 조건으로 상품 검색
      * @param searchDto 검색 조건 DTO
+     * @param page 페이지 번호 (기본값: 0)
+     * @param size 페이지 크기 (기본값: 10)
+     * @param sortBy 정렬 기준 (기본값: id)
+     * @param direction 정렬 방향 (기본값: asc)
+     * @param type 검색 타입 (jpql, querydsl, mybatis 중 선택, 기본값: querydsl)
      * @return 검색된 상품 목록
      */
     @PostMapping("/search")
-    public ResponseEntity<List<ProductResponseDto>> searchProducts(@RequestBody ProductSearchDto searchDto) {
-        return ResponseEntity.ok(productService.searchProducts(searchDto));
+    public ResponseEntity<?> searchProducts(
+            @RequestBody ProductSearchDto searchDto,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String direction,
+            @RequestParam(defaultValue = "querydsl") String type) {
+
+        Sort.Direction sortDirection = direction.equalsIgnoreCase("asc")
+                ? Sort.Direction.ASC : Sort.Direction.DESC;
+
+        switch (type.toLowerCase()) {
+            case "jpql":
+                Page<ProductResponseDto> jpqlResult = productService.searchProductsJpql(
+                        searchDto,
+                        PageRequest.of(page, size, Sort.by(sortDirection, sortBy))
+                );
+                return ResponseEntity.ok(jpqlResult);
+
+            case "querydsl":
+                Page<ProductResponseDto> queryDslResult = productService.searchProductsQueryDsl(
+                        searchDto,
+                        PageRequest.of(page, size, Sort.by(sortDirection, sortBy))
+                );
+                return ResponseEntity.ok(queryDslResult);
+
+            case "mybatis":
+                Page<ProductResponseDto> mybatisResult = productService.searchProductsMyBatis(
+                        searchDto,
+                        page * size,  // offset
+                        size,         // limit
+                        sortBy,
+                        direction
+                );
+                return ResponseEntity.ok(mybatisResult);
+
+            default:
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid search type. Use 'jpql', 'querydsl', or 'mybatis'"));
+        }
     }
 
     /**

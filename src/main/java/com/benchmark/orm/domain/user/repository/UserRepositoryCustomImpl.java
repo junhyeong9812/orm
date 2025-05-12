@@ -143,26 +143,14 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
         QUserProfile profile = QUserProfile.userProfile;
         QAddress address = QAddress.address;
 
-        // 프로필 먼저 조회
+        // 한 번의 쿼리로 프로필과 주소 모두 조회
         User result = queryFactory
-                .selectFrom(user)
+                .selectDistinct(user)  // distinct 추가!
+                .from(user)
                 .leftJoin(user.profile, profile).fetchJoin()
+                .leftJoin(user.addresses, address).fetchJoin()
                 .where(user.id.eq(userId))
                 .fetchOne();
-
-        if (result != null) {
-            // 주소 정보 조회 (N+1 문제를 방지하기 위해 별도 쿼리 실행)
-            User userWithAddresses = queryFactory
-                    .selectFrom(user)
-                    .leftJoin(user.addresses, address).fetchJoin()
-                    .where(user.id.eq(userId))
-                    .fetchOne();
-
-            if (userWithAddresses != null) {
-                // 이미 영속성 컨텍스트에 존재하므로 주소 정보만 가져오면 됨
-                result.getAddresses().addAll(userWithAddresses.getAddresses());
-            }
-        }
 
         return Optional.ofNullable(result);
     }

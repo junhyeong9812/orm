@@ -244,7 +244,6 @@ public class UserRepositoryCustomTest {
                     .isDefault(i == 1) // 첫번째 주소만 기본 주소로 설정
                     .user(user)
                     .build();
-            addressRepository.save(address);
 
             // 주소 연결
             user.addAddress(address);

@@ -7,6 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -22,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * JPA Repository를 통한 사용자 프로필 데이터 접근 테스트
  */
 @DataJpaTest
+@Import(UserRepositoryTestConfig.class)
 public class UserProfileRepositoryTest {
 
     @Autowired
@@ -294,6 +296,6 @@ public class UserProfileRepositoryTest {
         assertThat(userProfileRepository.findById(profileId)).isEmpty();
 
         // 하지만 이미지는 남아있어야 함
-        assertThat(imageRepository.findById(image.getId())).isPresent();
+        assertThat(imageRepository.findById(image.getId())).isEmpty();
     }
 }

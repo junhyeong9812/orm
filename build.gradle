@@ -15,6 +15,8 @@ java {
 
 repositories {
 	mavenCentral()
+	maven { url "https://repo.spring.io/milestone" }
+	maven { url "https://repo.spring.io/snapshot" }
 }
 
 dependencies {
@@ -25,15 +27,16 @@ dependencies {
 	// MyBatis
 	implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.3'
 
-	// 데이터베이스 드라이버
+	// 데이터베이스 드라이버 - H2만 유지
 	runtimeOnly 'com.h2database:h2'
-	runtimeOnly 'com.mysql:mysql-connector-j'
-	runtimeOnly 'org.postgresql:postgresql'
+	// 사용하지 않는 DB 드라이버 제거
+	// runtimeOnly 'com.mysql:mysql-connector-j'
+	// runtimeOnly 'org.postgresql:postgresql'
 
-	// NoSQL 데이터베이스
-	implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
-	implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
-	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+	// NoSQL 데이터베이스 제거
+	// implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+	// implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
+	// implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
 	// QueryDSL (Jakarta 호환 버전)
 	implementation 'com.querydsl:querydsl-jpa:5.0.0:jakarta'
@@ -53,11 +56,15 @@ dependencies {
 	// Swagger/OpenAPI
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
 
-	// 테스트
+	// 테스트 - 기본 Spring Boot 테스트 의존성만 유지
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-	testImplementation 'de.flapdoodle.embed:de.flapdoodle.embed.mongo.spring30x:4.12.0'
-	testImplementation 'it.ozimov:embedded-redis:0.7.3'
+
+	// 제거: MongoDB 및 Redis 관련 테스트 의존성
+	// testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+	// testImplementation 'org.testcontainers:mongodb'
+	// testImplementation 'org.testcontainers:junit-jupiter'
+	// testImplementation 'it.ozimov:embedded-redis:0.7.3'
 }
 
 tasks.named('test') {
@@ -75,6 +82,11 @@ sourceSets {
 
 configurations {
 	querydsl.extendsFrom compileClasspath
+
+	// 로깅 충돌 방지를 위한 설정 추가
+	all {
+		exclude group: 'org.slf4j', module: 'slf4j-simple'
+	}
 }
 
 tasks.withType(JavaCompile).configureEach {

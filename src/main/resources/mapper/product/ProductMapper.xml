@@ -4,7 +4,7 @@
 
 <mapper namespace="com.benchmark.orm.domain.product.mapper.ProductMapper">
     <!-- 상품 등록 -->
-    <insert id="insert" parameterType="com.benchmark.orm.domain.product.entity.Product">
+    <insert id="insert" parameterType="com.benchmark.orm.domain.product.entity.Product" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO product (name, price, brand_id, category_id)
         VALUES (#{name}, #{price}, #{brand.id}, #{category.id})
     </insert>
@@ -24,30 +24,262 @@
         DELETE FROM product WHERE id = #{id}
     </delete>
 
-    <!-- ID로 상품 조회 -->
-    <select id="findById" parameterType="long" resultType="com.benchmark.orm.domain.product.entity.Product">
-        SELECT * FROM product WHERE id = #{id}
+    <!-- ResultMap 정의: 상품 기본 정보 -->
+    <resultMap id="productResultMap" type="com.benchmark.orm.domain.product.entity.Product">
+        <id property="id" column="product_id"/>
+        <result property="name" column="product_name"/>
+        <result property="price" column="product_price"/>
+        <result property="createdAt" column="product_created_at"/>
+        <result property="updatedAt" column="product_updated_at"/>
+        <association property="brand" javaType="com.benchmark.orm.domain.product.entity.Brand">
+            <id property="id" column="brand_id"/>
+            <result property="name" column="brand_name"/>
+            <result property="createdAt" column="brand_created_at"/>
+            <result property="updatedAt" column="brand_updated_at"/>
+        </association>
+        <association property="category" javaType="com.benchmark.orm.domain.product.entity.Category">
+            <id property="id" column="category_id"/>
+            <result property="name" column="category_name"/>
+            <result property="createdAt" column="category_created_at"/>
+            <result property="updatedAt" column="category_updated_at"/>
+        </association>
+    </resultMap>
+
+    <!-- ResultMap 정의: 상품 이미지 포함 정보 -->
+    <resultMap id="productWithImagesResultMap" type="com.benchmark.orm.domain.product.entity.Product" extends="productResultMap">
+        <collection property="images" ofType="com.benchmark.orm.domain.product.entity.ProductImage">
+            <id property="id" column="image_id"/>
+            <result property="url" column="image_url"/>
+            <result property="isThumbnail" column="image_is_thumbnail"/>
+            <result property="createdAt" column="image_created_at"/>
+            <result property="updatedAt" column="image_updated_at"/>
+        </collection>
+    </resultMap>
+
+    <!-- ID로 상품 조회 (기본 정보만) -->
+    <select id="findById" parameterType="long" resultMap="productResultMap">
+        SELECT
+        p.id as product_id,
+        p.name as product_name,
+        p.price as product_price,
+        p.created_at as product_created_at,
+        p.updated_at as product_updated_at,
+        b.id as brand_id,
+        b.name as brand_name,
+        b.created_at as brand_created_at,
+        b.updated_at as brand_updated_at,
+        c.id as category_id,
+        c.name as category_name,
+        c.created_at as category_created_at,
+        c.updated_at as category_updated_at
+        FROM product p
+        LEFT JOIN brand b ON p.brand_id = b.id
+        LEFT JOIN category c ON p.category_id = c.id
+        WHERE p.id = #{id}
     </select>
 
-    <!-- 모든 상품 조회 -->
-    <select id="findAll" resultType="com.benchmark.orm.domain.product.entity.Product">
-        SELECT * FROM product
+    <!-- 상품명으로 상품 검색 -->
+    <select id="findByName" parameterType="string" resultMap="productResultMap">
+        SELECT
+        p.id as product_id,
+        p.name as product_name,
+        p.price as product_price,
+        p.created_at as product_created_at,
+        p.updated_at as product_updated_at,
+        b.id as brand_id,
+        b.name as brand_name,
+        b.created_at as brand_created_at,
+        b.updated_at as brand_updated_at,
+        c.id as category_id,
+        c.name as category_name,
+        c.created_at as category_created_at,
+        c.updated_at as category_updated_at
+        FROM product p
+        LEFT JOIN brand b ON p.brand_id = b.id
+        LEFT JOIN category c ON p.category_id = c.id
+        WHERE p.name = #{name}
+    </select>
+
+    <!-- 가격 범위로 상품 검색 -->
+    <select id="findByPriceBetween" resultMap="productResultMap">
+        SELECT
+        p.id as product_id,
+        p.name as product_name,
+        p.price as product_price,
+        p.created_at as product_created_at,
+        p.updated_at as product_updated_at,
+        b.id as brand_id,
+        b.name as brand_name,
+        b.created_at as brand_created_at,
+        b.updated_at as brand_updated_at,
+        c.id as category_id,
+        c.name as category_name,
+        c.created_at as category_created_at,
+        c.updated_at as category_updated_at
+        FROM product p
+        LEFT JOIN brand b ON p.brand_id = b.id
+        LEFT JOIN category c ON p.category_id = c.id
+        WHERE p.price BETWEEN #{minPrice} AND #{maxPrice}
+    </select>
+
+    <!-- 브랜드 ID로 상품 검색 -->
+    <select id="findByBrandId" parameterType="long" resultMap="productResultMap">
+        SELECT
+        p.id as product_id,
+        p.name as product_name,
+        p.price as product_price,
+        p.created_at as product_created_at,
+        p.updated_at as product_updated_at,
+        b.id as brand_id,
+        b.name as brand_name,
+        b.created_at as brand_created_at,
+        b.updated_at as brand_updated_at,
+        c.id as category_id,
+        c.name as category_name,
+        c.created_at as category_created_at,
+        c.updated_at as category_updated_at
+        FROM product p
+        LEFT JOIN brand b ON p.brand_id = b.id
+        LEFT JOIN category c ON p.category_id = c.id
+        WHERE p.brand_id = #{brandId}
+    </select>
+
+    <!-- 카테고리 ID로 상품 검색 -->
+    <select id="findByCategoryId" parameterType="long" resultMap="productResultMap">
+        SELECT
+        p.id as product_id,
+        p.name as product_name,
+        p.price as product_price,
+        p.created_at as product_created_at,
+        p.updated_at as product_updated_at,
+        b.id as brand_id,
+        b.name as brand_name,
+        b.created_at as brand_created_at,
+        b.updated_at as brand_updated_at,
+        c.id as category_id,
+        c.name as category_name,
+        c.created_at as category_created_at,
+        c.updated_at as category_updated_at
+        FROM product p
+        LEFT JOIN brand b ON p.brand_id = b.id
+        LEFT JOIN category c ON p.category_id = c.id
+        WHERE p.category_id = #{categoryId}
+    </select>
+
+    <!-- 모든 상품 조회 (기본 정보만) -->
+    <select id="findAll" resultMap="productResultMap">
+        SELECT
+        p.id as product_id,
+        p.name as product_name,
+        p.price as product_price,
+        p.created_at as product_created_at,
+        p.updated_at as product_updated_at,
+        b.id as brand_id,
+        b.name as brand_name,
+        b.created_at as brand_created_at,
+        b.updated_at as brand_updated_at,
+        c.id as category_id,
+        c.name as category_name,
+        c.created_at as category_created_at,
+        c.updated_at as category_updated_at
+        FROM product p
+        LEFT JOIN brand b ON p.brand_id = b.id
+        LEFT JOIN category c ON p.category_id = c.id
     </select>
 
     <!-- 페이징된 상품 조회 -->
-    <select id="findAllWithPaging" resultType="com.benchmark.orm.domain.product.entity.Product">
-        SELECT * FROM product LIMIT #{limit} OFFSET #{offset}
+    <select id="findAllWithPaging" resultMap="productResultMap">
+        SELECT
+        p.id as product_id,
+        p.name as product_name,
+        p.price as product_price,
+        p.created_at as product_created_at,
+        p.updated_at as product_updated_at,
+        b.id as brand_id,
+        b.name as brand_name,
+        b.created_at as brand_created_at,
+        b.updated_at as brand_updated_at,
+        c.id as category_id,
+        c.name as category_name,
+        c.created_at as category_created_at,
+        c.updated_at as category_updated_at
+        FROM product p
+        LEFT JOIN brand b ON p.brand_id = b.id
+        LEFT JOIN category c ON p.category_id = c.id
+        LIMIT #{limit} OFFSET #{offset}
     </select>
 
     <!-- 정렬된 상품 조회 -->
-    <select id="findAllWithSorting" resultType="com.benchmark.orm.domain.product.entity.Product">
-        SELECT * FROM product ORDER BY ${sortColumn} ${sortDirection}
+    <select id="findAllWithSorting" resultMap="productResultMap">
+        SELECT
+        p.id as product_id,
+        p.name as product_name,
+        p.price as product_price,
+        p.created_at as product_created_at,
+        p.updated_at as product_updated_at,
+        b.id as brand_id,
+        b.name as brand_name,
+        b.created_at as brand_created_at,
+        b.updated_at as brand_updated_at,
+        c.id as category_id,
+        c.name as category_name,
+        c.created_at as category_created_at,
+        c.updated_at as category_updated_at
+        FROM product p
+        LEFT JOIN brand b ON p.brand_id = b.id
+        LEFT JOIN category c ON p.category_id = c.id
+        ORDER BY p.${sortColumn} ${sortDirection}
     </select>
 
     <!-- 페이징 및 정렬된 상품 조회 -->
-    <select id="findAllWithPagingAndSorting" resultType="com.benchmark.orm.domain.product.entity.Product">
-        SELECT * FROM product ORDER BY ${sortColumn} ${sortDirection}
+    <select id="findAllWithPagingAndSorting" resultMap="productResultMap">
+        SELECT
+        p.id as product_id,
+        p.name as product_name,
+        p.price as product_price,
+        p.created_at as product_created_at,
+        p.updated_at as product_updated_at,
+        b.id as brand_id,
+        b.name as brand_name,
+        b.created_at as brand_created_at,
+        b.updated_at as brand_updated_at,
+        c.id as category_id,
+        c.name as category_name,
+        c.created_at as category_created_at,
+        c.updated_at as category_updated_at
+        FROM product p
+        LEFT JOIN brand b ON p.brand_id = b.id
+        LEFT JOIN category c ON p.category_id = c.id
+        ORDER BY p.${sortColumn} ${sortDirection}
         LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- 상품과 이미지 함께 조회 -->
+    <select id="findProductWithImages" parameterType="long" resultMap="productWithImagesResultMap">
+        SELECT
+        p.id as product_id,
+        p.name as product_name,
+        p.price as product_price,
+        p.created_at as product_created_at,
+        p.updated_at as product_updated_at,
+        b.id as brand_id,
+        b.name as brand_name,
+        b.created_at as brand_created_at,
+        b.updated_at as brand_updated_at,
+        c.id as category_id,
+        c.name as category_name,
+        c.created_at as category_created_at,
+        c.updated_at as category_updated_at,
+        i.id as image_id,
+        i.url as image_url,
+        i.is_thumbnail as image_is_thumbnail,
+        i.created_at as image_created_at,
+        i.updated_at as image_updated_at
+        FROM product p
+        LEFT JOIN brand b ON p.brand_id = b.id
+        LEFT JOIN category c ON p.category_id = c.id
+        LEFT JOIN product_image i ON p.id = i.product_id
+        WHERE p.id = #{id}
     </select>
 
     <!-- 검색 조건에 따른 WHERE 절 -->
@@ -55,35 +287,35 @@
         <where>
             <if test="searchDto != null">
                 <if test="searchDto.keyword != null and searchDto.keyword != ''">
-                    name LIKE CONCAT('%', #{searchDto.keyword}, '%')
+                    p.name LIKE CONCAT('%', #{searchDto.keyword}, '%')
                 </if>
                 <if test="searchDto.minPrice != null and searchDto.maxPrice != null">
                     <choose>
                         <when test="searchDto.keyword == null or searchDto.keyword == ''">
-                            price BETWEEN #{searchDto.minPrice} AND #{searchDto.maxPrice}
+                            p.price BETWEEN #{searchDto.minPrice} AND #{searchDto.maxPrice}
                         </when>
                         <otherwise>
-                            AND price BETWEEN #{searchDto.minPrice} AND #{searchDto.maxPrice}
+                            AND p.price BETWEEN #{searchDto.minPrice} AND #{searchDto.maxPrice}
                         </otherwise>
                     </choose>
                 </if>
                 <if test="searchDto.minPrice != null and searchDto.maxPrice == null">
                     <choose>
                         <when test="searchDto.keyword == null or searchDto.keyword == ''">
-                            price &gt;= #{searchDto.minPrice}
+                            p.price &gt;= #{searchDto.minPrice}
                         </when>
                         <otherwise>
-                            AND price &gt;= #{searchDto.minPrice}
+                            AND p.price &gt;= #{searchDto.minPrice}
                         </otherwise>
                     </choose>
                 </if>
                 <if test="searchDto.minPrice == null and searchDto.maxPrice != null">
                     <choose>
                         <when test="searchDto.keyword == null or searchDto.keyword == ''">
-                            price &lt;= #{searchDto.maxPrice}
+                            p.price &lt;= #{searchDto.maxPrice}
                         </when>
                         <otherwise>
-                            AND price &lt;= #{searchDto.maxPrice}
+                            AND p.price &lt;= #{searchDto.maxPrice}
                         </otherwise>
                     </choose>
                 </if>
@@ -91,10 +323,10 @@
                     <choose>
                         <when test="(searchDto.keyword == null or searchDto.keyword == '')
                         and (searchDto.minPrice == null) and (searchDto.maxPrice == null)">
-                            brand_id = #{searchDto.brandId}
+                            p.brand_id = #{searchDto.brandId}
                         </when>
                         <otherwise>
-                            AND brand_id = #{searchDto.brandId}
+                            AND p.brand_id = #{searchDto.brandId}
                         </otherwise>
                     </choose>
                 </if>
@@ -103,10 +335,10 @@
                         <when test="(searchDto.keyword == null or searchDto.keyword == '')
                         and (searchDto.minPrice == null) and (searchDto.maxPrice == null)
                         and (searchDto.brandId == null)">
-                            category_id = #{searchDto.categoryId}
+                            p.category_id = #{searchDto.categoryId}
                         </when>
                         <otherwise>
-                            AND category_id = #{searchDto.categoryId}
+                            AND p.category_id = #{searchDto.categoryId}
                         </otherwise>
                     </choose>
                 </if>
@@ -115,11 +347,27 @@
     </sql>
 
     <!-- 검색 조건을 이용한 상품 검색 -->
-    <select id="searchProducts" resultType="com.benchmark.orm.domain.product.entity.Product">
-        SELECT * FROM product
+    <select id="searchProducts" resultMap="productResultMap">
+        SELECT
+        p.id as product_id,
+        p.name as product_name,
+        p.price as product_price,
+        p.created_at as product_created_at,
+        p.updated_at as product_updated_at,
+        b.id as brand_id,
+        b.name as brand_name,
+        b.created_at as brand_created_at,
+        b.updated_at as brand_updated_at,
+        c.id as category_id,
+        c.name as category_name,
+        c.created_at as category_created_at,
+        c.updated_at as category_updated_at
+        FROM product p
+        LEFT JOIN brand b ON p.brand_id = b.id
+        LEFT JOIN category c ON p.category_id = c.id
         <include refid="searchCondition"/>
         <if test="sortColumn != null and sortDirection != null">
-            ORDER BY ${sortColumn} ${sortDirection}
+            ORDER BY p.${sortColumn} ${sortDirection}
         </if>
         <if test="limit > 0">
             LIMIT #{limit} OFFSET #{offset}
@@ -128,7 +376,9 @@
 
     <!-- 검색 조건을 이용한 상품 총 개수 조회 -->
     <select id="countBySearchDto" resultType="int">
-        SELECT COUNT(*) FROM product
+        SELECT COUNT(*) FROM product p
+        LEFT JOIN brand b ON p.brand_id = b.id
+        LEFT JOIN category c ON p.category_id = c.id
         <include refid="searchCondition"/>
     </select>
 </mapper>

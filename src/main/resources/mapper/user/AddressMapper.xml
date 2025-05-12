@@ -48,38 +48,53 @@
         DELETE FROM address WHERE user_id = #{userId}
     </delete>
 
-    <!-- ID로 주소 조회 -->
-    <select id="findById" parameterType="long" resultType="com.benchmark.orm.domain.user.entity.Address">
-        SELECT * FROM address WHERE id = #{id}
+    <!-- ID로 주소 조회 - ResultMap 사용 및 조인 추가 -->
+    <select id="findById" parameterType="long" resultMap="addressResultMap">
+        SELECT a.*, u.id as user_id, u.username, u.email
+        FROM address a
+        LEFT JOIN users u ON a.user_id = u.id
+        WHERE a.id = #{id}
     </select>
 
-    <!-- 사용자 ID로 주소 목록 조회 -->
-    <select id="findByUserId" parameterType="long" resultType="com.benchmark.orm.domain.user.entity.Address">
-        SELECT * FROM address WHERE user_id = #{userId}
+    <!-- 사용자 ID로 주소 목록 조회 - ResultMap 사용 및 조인 추가 -->
+    <select id="findByUserId" parameterType="long" resultMap="addressResultMap">
+        SELECT a.*, u.id as user_id, u.username, u.email
+        FROM address a
+        LEFT JOIN users u ON a.user_id = u.id
+        WHERE a.user_id = #{userId}
     </select>
 
-    <!-- 사용자 ID로 기본 주소 조회 -->
-    <select id="findDefaultByUserId" parameterType="long" resultType="com.benchmark.orm.domain.user.entity.Address">
-        SELECT * FROM address WHERE user_id = #{userId} AND is_default = true LIMIT 1
+    <!-- 사용자 ID로 기본 주소 조회 - ResultMap 사용 및 조인 추가 -->
+    <select id="findDefaultByUserId" parameterType="long" resultMap="addressResultMap">
+        SELECT a.*, u.id as user_id, u.username, u.email
+        FROM address a
+        LEFT JOIN users u ON a.user_id = u.id
+        WHERE a.user_id = #{userId} AND a.is_default = true LIMIT 1
     </select>
 
-    <!-- 모든 주소 조회 -->
-    <select id="findAll" resultType="com.benchmark.orm.domain.user.entity.Address">
-        SELECT * FROM address
+    <!-- 모든 주소 조회 - ResultMap 사용 및 조인 추가 -->
+    <select id="findAll" resultMap="addressResultMap">
+        SELECT a.*, u.id as user_id, u.username, u.email
+        FROM address a
+        LEFT JOIN users u ON a.user_id = u.id
     </select>
 
-    <!-- 페이징된 주소 조회 -->
-    <select id="findAllWithPaging" resultType="com.benchmark.orm.domain.user.entity.Address">
-        SELECT * FROM address
-        ORDER BY id ASC
+    <!-- 페이징된 주소 조회 - ResultMap 사용 및 조인 추가 -->
+    <select id="findAllWithPaging" resultMap="addressResultMap">
+        SELECT a.*, u.id as user_id, u.username, u.email
+        FROM address a
+        LEFT JOIN users u ON a.user_id = u.id
+        ORDER BY a.id ASC
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <!-- 사용자 ID로 페이징된 주소 조회 -->
-    <select id="findByUserIdWithPaging" resultType="com.benchmark.orm.domain.user.entity.Address">
-        SELECT * FROM address
-        WHERE user_id = #{userId}
-        ORDER BY id ASC
+    <!-- 사용자 ID로 페이징된 주소 조회 - ResultMap 사용 및 조인 추가 -->
+    <select id="findByUserIdWithPaging" resultMap="addressResultMap">
+        SELECT a.*, u.id as user_id, u.username, u.email
+        FROM address a
+        LEFT JOIN users u ON a.user_id = u.id
+        WHERE a.user_id = #{userId}
+        ORDER BY a.id ASC
         LIMIT #{limit} OFFSET #{offset}
     </select>
 </mapper>

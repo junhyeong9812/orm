@@ -2,10 +2,13 @@ package com.benchmark.orm.domain.user.repository;
 
 import com.benchmark.orm.domain.user.entity.Image;
 import com.benchmark.orm.domain.user.entity.UserProfile;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -22,6 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * JPA Repository를 통한 이미지 데이터 접근 테스트
  */
 @DataJpaTest
+@Import(UserRepositoryTestConfig.class)
 public class ImageRepositoryTest {
 
     @Autowired
@@ -29,6 +33,9 @@ public class ImageRepositoryTest {
 
     @Autowired
     private UserProfileRepository userProfileRepository;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Test
     @DisplayName("이미지 저장 및 조회 테스트")
@@ -211,11 +218,16 @@ public class ImageRepositoryTest {
                 .build();
         userProfileRepository.save(profile);
 
-        // when - 이미지 삭제 시도 (프로필과 연결된 상태)
-        imageRepository.delete(image);
+        // when - 프로필에서 이미지 참조 제거
+        profile.changeProfileImage(null); // 이미지 참조 제거
+        userProfileRepository.save(profile);
+
+        // 영속성 컨텍스트 갱신
+        entityManager.flush();
+        entityManager.clear();
 
         // then - 이미지 삭제 확인 및 프로필 상태 확인
-        // 이미지가 삭제되었는지 확인
+        // orphanRemoval=true 설정으로 인해 이미지가 자동 삭제되어야 함
         assertThat(imageRepository.findById(image.getId())).isEmpty();
 
         // 프로필은 남아있지만 이미지 참조가 null이 되었는지 확인
