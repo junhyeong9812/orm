@@ -187,17 +187,15 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
                 .fetchOne();
 
         if (result != null) {
-            // 이미지 정보 조회 (N+1 문제를 방지하기 위해 별도 쿼리 실행)
-            Product productWithImages = queryFactory
-                    .selectFrom(product)
-                    .leftJoin(product.images, image).fetchJoin()
-                    .where(product.id.eq(productId))
-                    .fetchOne();
+            // 이미지 직접 조회 - 상품 엔티티를 통하지 않고 이미지 엔티티만 조회
+            List<ProductImage> images = queryFactory
+                    .selectFrom(image)
+                    .where(image.product.id.eq(productId))
+                    .fetch();
 
-            if (productWithImages != null) {
-                // 이미 영속성 컨텍스트에 존재하므로 이미지 정보만 가져오면 됨
-                result.getImages().addAll(productWithImages.getImages());
-            }
+            // 기존 컬렉션 비우고 새로 조회한 이미지들로 채움
+            result.getImages().clear();
+            result.getImages().addAll(images);
         }
 
         return Optional.ofNullable(result);
