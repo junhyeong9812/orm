@@ -54,7 +54,19 @@ public class ProductImage extends BaseTimeEntity {
      * @return 현재 상품 이미지 엔티티
      */
     public ProductImage assignProduct(Product product) {
+        // 이전 상품에서 이미지 제거
+        if (this.product != null && this.product != product) {
+            this.product.getImages().remove(this);
+        }
+
+        // 상품 설정
         this.product = product;
+
+        // 새 상품에 이미지 추가 (무한 루프 방지)
+        if (product != null && !product.getImages().contains(this)) {
+            product.getImages().add(this);
+        }
+
         return this;
     }
 }

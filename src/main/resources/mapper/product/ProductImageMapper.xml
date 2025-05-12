@@ -3,8 +3,9 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.benchmark.orm.domain.product.mapper.ProductImageMapper">
-    <!-- 상품 이미지 등록 -->
-    <insert id="insert" parameterType="com.benchmark.orm.domain.product.entity.ProductImage">
+    <!-- 상품 이미지 등록 (useGeneratedKeys와 keyProperty 추가) -->
+    <insert id="insert" parameterType="com.benchmark.orm.domain.product.entity.ProductImage"
+            useGeneratedKeys="true" keyProperty="id">
         INSERT INTO product_image (url, is_thumbnail, product_id)
         VALUES (#{url}, #{isThumbnail}, #{product.id})
     </insert>
@@ -23,29 +24,109 @@
         DELETE FROM product_image WHERE id = #{id}
     </delete>
 
-    <!-- ID로 상품 이미지 조회 -->
-    <select id="findById" parameterType="long" resultType="com.benchmark.orm.domain.product.entity.ProductImage">
-        SELECT * FROM product_image WHERE id = #{id}
+    <!-- 결과 매핑 정의: 상품 이미지와 상품 -->
+    <resultMap id="productImageResultMap" type="com.benchmark.orm.domain.product.entity.ProductImage">
+        <id property="id" column="image_id"/>
+        <result property="url" column="image_url"/>
+        <result property="isThumbnail" column="image_is_thumbnail"/>
+        <result property="createdAt" column="image_created_at"/>
+        <result property="updatedAt" column="image_updated_at"/>
+        <association property="product" javaType="com.benchmark.orm.domain.product.entity.Product">
+            <id property="id" column="product_id"/>
+            <result property="name" column="product_name"/>
+            <result property="price" column="product_price"/>
+            <result property="createdAt" column="product_created_at"/>
+            <result property="updatedAt" column="product_updated_at"/>
+        </association>
+    </resultMap>
+
+    <!-- ID로 상품 이미지 조회 (상품 정보 포함) -->
+    <select id="findById" parameterType="long" resultMap="productImageResultMap">
+        SELECT
+        pi.id as image_id,
+        pi.url as image_url,
+        pi.is_thumbnail as image_is_thumbnail,
+        pi.created_at as image_created_at,
+        pi.updated_at as image_updated_at,
+        p.id as product_id,
+        p.name as product_name,
+        p.price as product_price,
+        p.created_at as product_created_at,
+        p.updated_at as product_updated_at
+        FROM product_image pi
+        LEFT JOIN product p ON pi.product_id = p.id
+        WHERE pi.id = #{id}
     </select>
 
-    <!-- 모든 상품 이미지 조회 -->
-    <select id="findAll" resultType="com.benchmark.orm.domain.product.entity.ProductImage">
-        SELECT * FROM product_image
+    <!-- 모든 상품 이미지 조회 (상품 정보 포함) -->
+    <select id="findAll" resultMap="productImageResultMap">
+        SELECT
+        pi.id as image_id,
+        pi.url as image_url,
+        pi.is_thumbnail as image_is_thumbnail,
+        pi.created_at as image_created_at,
+        pi.updated_at as image_updated_at,
+        p.id as product_id,
+        p.name as product_name,
+        p.price as product_price,
+        p.created_at as product_created_at,
+        p.updated_at as product_updated_at
+        FROM product_image pi
+        LEFT JOIN product p ON pi.product_id = p.id
     </select>
 
-    <!-- 페이징된 상품 이미지 조회 -->
-    <select id="findAllWithPaging" resultType="com.benchmark.orm.domain.product.entity.ProductImage">
-        SELECT * FROM product_image LIMIT #{limit} OFFSET #{offset}
+    <!-- 페이징된 상품 이미지 조회 (상품 정보 포함) -->
+    <select id="findAllWithPaging" resultMap="productImageResultMap">
+        SELECT
+        pi.id as image_id,
+        pi.url as image_url,
+        pi.is_thumbnail as image_is_thumbnail,
+        pi.created_at as image_created_at,
+        pi.updated_at as image_updated_at,
+        p.id as product_id,
+        p.name as product_name,
+        p.price as product_price,
+        p.created_at as product_created_at,
+        p.updated_at as product_updated_at
+        FROM product_image pi
+        LEFT JOIN product p ON pi.product_id = p.id
+        LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <!-- 정렬된 상품 이미지 조회 -->
-    <select id="findAllWithSorting" resultType="com.benchmark.orm.domain.product.entity.ProductImage">
-        SELECT * FROM product_image ORDER BY ${sortColumn} ${sortDirection}
+    <!-- 정렬된 상품 이미지 조회 (상품 정보 포함) -->
+    <select id="findAllWithSorting" resultMap="productImageResultMap">
+        SELECT
+        pi.id as image_id,
+        pi.url as image_url,
+        pi.is_thumbnail as image_is_thumbnail,
+        pi.created_at as image_created_at,
+        pi.updated_at as image_updated_at,
+        p.id as product_id,
+        p.name as product_name,
+        p.price as product_price,
+        p.created_at as product_created_at,
+        p.updated_at as product_updated_at
+        FROM product_image pi
+        LEFT JOIN product p ON pi.product_id = p.id
+        ORDER BY pi.${sortColumn} ${sortDirection}
     </select>
 
-    <!-- 페이징 및 정렬된 상품 이미지 조회 -->
-    <select id="findAllWithPagingAndSorting" resultType="com.benchmark.orm.domain.product.entity.ProductImage">
-        SELECT * FROM product_image ORDER BY ${sortColumn} ${sortDirection}
+    <!-- 페이징 및 정렬된 상품 이미지 조회 (상품 정보 포함) -->
+    <select id="findAllWithPagingAndSorting" resultMap="productImageResultMap">
+        SELECT
+        pi.id as image_id,
+        pi.url as image_url,
+        pi.is_thumbnail as image_is_thumbnail,
+        pi.created_at as image_created_at,
+        pi.updated_at as image_updated_at,
+        p.id as product_id,
+        p.name as product_name,
+        p.price as product_price,
+        p.created_at as product_created_at,
+        p.updated_at as product_updated_at
+        FROM product_image pi
+        LEFT JOIN product p ON pi.product_id = p.id
+        ORDER BY pi.${sortColumn} ${sortDirection}
         LIMIT #{limit} OFFSET #{offset}
     </select>
 </mapper>

@@ -3,8 +3,9 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.benchmark.orm.domain.product.mapper.CategoryMapper">
-    <!-- 카테고리 등록 -->
-    <insert id="insert" parameterType="com.benchmark.orm.domain.product.entity.Category">
+    <!-- 카테고리 등록 (useGeneratedKeys와 keyProperty 추가) -->
+    <insert id="insert" parameterType="com.benchmark.orm.domain.product.entity.Category"
+            useGeneratedKeys="true" keyProperty="id">
         INSERT INTO category (name, parent_id)
         VALUES (#{name}, #{parent.id})
     </insert>
@@ -21,29 +22,67 @@
         DELETE FROM category WHERE id = #{id}
     </delete>
 
-    <!-- ID로 카테고리 조회 -->
-    <select id="findById" parameterType="long" resultType="com.benchmark.orm.domain.product.entity.Category">
-        SELECT * FROM category WHERE id = #{id}
+    <!-- 결과 매핑 정의: 카테고리와 부모 카테고리 -->
+    <resultMap id="categoryResultMap" type="com.benchmark.orm.domain.product.entity.Category">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <association property="parent" javaType="com.benchmark.orm.domain.product.entity.Category">
+            <id property="id" column="parent_id"/>
+            <result property="name" column="parent_name"/>
+            <result property="createdAt" column="parent_created_at"/>
+            <result property="updatedAt" column="parent_updated_at"/>
+        </association>
+    </resultMap>
+
+    <!-- ID로 카테고리 조회 (부모 정보 포함) -->
+    <select id="findById" parameterType="long" resultMap="categoryResultMap">
+        SELECT c.id, c.name, c.created_at, c.updated_at,
+        p.id as parent_id, p.name as parent_name,
+        p.created_at as parent_created_at, p.updated_at as parent_updated_at
+        FROM category c
+        LEFT JOIN category p ON c.parent_id = p.id
+        WHERE c.id = #{id}
     </select>
 
-    <!-- 모든 카테고리 조회 -->
-    <select id="findAll" resultType="com.benchmark.orm.domain.product.entity.Category">
-        SELECT * FROM category
+    <!-- 모든 카테고리 조회 (부모 정보 포함) -->
+    <select id="findAll" resultMap="categoryResultMap">
+        SELECT c.id, c.name, c.created_at, c.updated_at,
+        p.id as parent_id, p.name as parent_name,
+        p.created_at as parent_created_at, p.updated_at as parent_updated_at
+        FROM category c
+        LEFT JOIN category p ON c.parent_id = p.id
     </select>
 
-    <!-- 페이징된 카테고리 조회 -->
-    <select id="findAllWithPaging" resultType="com.benchmark.orm.domain.product.entity.Category">
-        SELECT * FROM category LIMIT #{limit} OFFSET #{offset}
+    <!-- 페이징된 카테고리 조회 (부모 정보 포함) -->
+    <select id="findAllWithPaging" resultMap="categoryResultMap">
+        SELECT c.id, c.name, c.created_at, c.updated_at,
+        p.id as parent_id, p.name as parent_name,
+        p.created_at as parent_created_at, p.updated_at as parent_updated_at
+        FROM category c
+        LEFT JOIN category p ON c.parent_id = p.id
+        LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <!-- 정렬된 카테고리 조회 -->
-    <select id="findAllWithSorting" resultType="com.benchmark.orm.domain.product.entity.Category">
-        SELECT * FROM category ORDER BY ${sortColumn} ${sortDirection}
+    <!-- 정렬된 카테고리 조회 (부모 정보 포함) -->
+    <select id="findAllWithSorting" resultMap="categoryResultMap">
+        SELECT c.id, c.name, c.created_at, c.updated_at,
+        p.id as parent_id, p.name as parent_name,
+        p.created_at as parent_created_at, p.updated_at as parent_updated_at
+        FROM category c
+        LEFT JOIN category p ON c.parent_id = p.id
+        ORDER BY c.${sortColumn} ${sortDirection}
     </select>
 
-    <!-- 페이징 및 정렬된 카테고리 조회 -->
-    <select id="findAllWithPagingAndSorting" resultType="com.benchmark.orm.domain.product.entity.Category">
-        SELECT * FROM category ORDER BY ${sortColumn} ${sortDirection}
+    <!-- 페이징 및 정렬된 카테고리 조회 (부모 정보 포함) -->
+    <select id="findAllWithPagingAndSorting" resultMap="categoryResultMap">
+        SELECT c.id, c.name, c.created_at, c.updated_at,
+        p.id as parent_id, p.name as parent_name,
+        p.created_at as parent_created_at, p.updated_at as parent_updated_at
+        FROM category c
+        LEFT JOIN category p ON c.parent_id = p.id
+        ORDER BY c.${sortColumn} ${sortDirection}
         LIMIT #{limit} OFFSET #{offset}
     </select>
 </mapper>

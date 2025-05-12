@@ -3,8 +3,9 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.benchmark.orm.domain.product.mapper.BrandMapper">
-    <!-- 브랜드 등록 -->
-    <insert id="insert" parameterType="com.benchmark.orm.domain.product.entity.Brand">
+    <!-- 브랜드 등록 (useGeneratedKeys와 keyProperty 추가) -->
+    <insert id="insert" parameterType="com.benchmark.orm.domain.product.entity.Brand"
+            useGeneratedKeys="true" keyProperty="id">
         INSERT INTO brand (name)
         VALUES (#{name})
     </insert>
