@@ -61,9 +61,12 @@
         SELECT * FROM orders WHERE id = #{id}
     </select>
 
-    <!-- 사용자 ID로 주문 조회 -->
-    <select id="findByUserId" parameterType="long" resultType="com.benchmark.orm.domain.order.entity.Order">
-        SELECT * FROM orders WHERE user_id = #{userId}
+    <!-- 사용자 ID로 주문 조회 (수정됨) -->
+    <select id="findByUserId" parameterType="long" resultMap="orderResultMap">
+        SELECT o.*, u.username, u.email
+        FROM orders o
+        LEFT JOIN users u ON o.user_id = u.id
+        WHERE o.user_id = #{userId}
     </select>
 
     <!-- 주문 상태로 주문 조회 -->
@@ -71,9 +74,12 @@
         SELECT * FROM orders WHERE status = #{status}
     </select>
 
-    <!-- 사용자 ID와 주문 상태로 주문 조회 -->
-    <select id="findByUserIdAndStatus" resultType="com.benchmark.orm.domain.order.entity.Order">
-        SELECT * FROM orders WHERE user_id = #{userId} AND status = #{status}
+    <!-- 사용자 ID와 주문 상태로 주문 조회 (수정됨) -->
+    <select id="findByUserIdAndStatus" resultMap="orderResultMap">
+        SELECT o.*, u.username, u.email
+        FROM orders o
+        LEFT JOIN users u ON o.user_id = u.id
+        WHERE o.user_id = #{userId} AND o.status = #{status}
     </select>
 
     <!-- 주문 날짜 범위로 주문 조회 -->
