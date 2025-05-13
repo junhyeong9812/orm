@@ -25,7 +25,12 @@
     <!-- 주문 상품 등록 -->
     <insert id="insert" parameterType="com.benchmark.orm.domain.order.entity.OrderItem" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO order_items (quantity, order_price, order_id, product_id, created_at, updated_at)
-        VALUES (#{quantity}, #{orderPrice}, #{order.id}, #{product.id}, #{createdAt}, #{updatedAt})
+        VALUES (#{quantity}, #{orderPrice}, #{order.id},
+        <choose>
+            <when test="product != null">#{product.id}</when>
+            <otherwise>null</otherwise>
+        </choose>,
+        #{createdAt}, #{updatedAt})
     </insert>
 
     <!-- 주문 상품 정보 수정 -->
@@ -34,7 +39,10 @@
         SET quantity = #{quantity},
         order_price = #{orderPrice},
         order_id = #{order.id},
-        product_id = #{product.id},
+        product_id = <choose>
+        <when test="product != null">#{product.id}</when>
+        <otherwise>product_id</otherwise>
+    </choose>,
         updated_at = #{updatedAt}
         WHERE id = #{id}
     </update>
@@ -170,17 +178,47 @@
         WHERE product_id = #{productId}
     </select>
 
-    <!-- 가장 많이 주문된 상품 목록 조회 -->
+    <!-- 가장 많이 주문된 상품 목록 조회 - 중복 제거 수정 버전 -->
     <select id="findMostOrderedProducts" parameterType="int" resultMap="orderItemResultMap">
-        SELECT p.id as product_id, p.name as product_name, p.price as product_price,
-        SUM(oi.quantity) as total_quantity,
-        oi.id, oi.quantity, oi.order_price, oi.created_at, oi.updated_at,
-        o.id as order_id, o.order_date, o.status
-        FROM order_items oi
-        LEFT JOIN product p ON oi.product_id = p.id
-        LEFT JOIN orders o ON oi.order_id = o.id
-        GROUP BY oi.product_id
+        <!-- 서브쿼리로 먼저 상위 N개의 상품을 구하고, 각 상품별로 하나의 대표 주문항목만 선택 -->
+        WITH top_products AS (
+        SELECT product_id, SUM(quantity) as total_quantity
+        FROM order_items
+        WHERE product_id IS NOT NULL
+        GROUP BY product_id
         ORDER BY total_quantity DESC
         LIMIT #{limit}
+        ),
+        ranked_items AS (
+        SELECT
+        oi.id,
+        oi.quantity,
+        oi.order_price,
+        oi.created_at,
+        oi.updated_at,
+        oi.order_id,
+        oi.product_id,
+        tp.total_quantity,
+        ROW_NUMBER() OVER (PARTITION BY oi.product_id ORDER BY oi.id) as row_num
+        FROM top_products tp
+        JOIN order_items oi ON tp.product_id = oi.product_id
+        )
+        SELECT
+        ri.id,
+        ri.quantity,
+        ri.order_price,
+        ri.created_at,
+        ri.updated_at,
+        o.id as order_id,
+        o.order_date,
+        o.status,
+        p.id as product_id,
+        p.name as product_name,
+        p.price as product_price
+        FROM ranked_items ri
+        LEFT JOIN orders o ON ri.order_id = o.id
+        LEFT JOIN product p ON ri.product_id = p.id
+        WHERE ri.row_num = 1  <!-- 각 상품별로 첫 번째 주문 항목만 선택 -->
+        ORDER BY ri.total_quantity DESC  <!-- 여전히 총 주문 수량으로 정렬 -->
     </select>
 </mapper>
