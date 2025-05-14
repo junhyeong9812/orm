@@ -4,7 +4,9 @@ import com.benchmark.orm.domain.order.entity.Order;
 import com.benchmark.orm.domain.order.entity.Order.OrderStatus;
 import com.benchmark.orm.domain.order.entity.OrderItem;
 import com.benchmark.orm.domain.product.entity.Product;
+import com.benchmark.orm.domain.product.repository.ProductRepository;
 import com.benchmark.orm.domain.user.entity.User;
+import com.benchmark.orm.domain.user.repository.UserRepository;
 import com.benchmark.orm.domain.user.repository.UserRepositoryTestConfig;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,20 +39,30 @@ public class OrderItemRepositoryCustomTest {
     @Autowired
     private OrderRepository orderRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private ProductRepository productRepository;
+
     // 테스트용 사용자 생성 헬퍼 메서드
     private User createTestUser() {
-        return User.builder()
+        User user = User.builder()
                 .username("테스트유저")
                 .email("test@example.com")
                 .build();
+
+        return userRepository.save(user);
     }
 
     // 테스트용 상품 생성 헬퍼 메서드
     private Product createTestProduct(String name, int price) {
-        return Product.builder()
+        Product product = Product.builder()
                 .name(name)
                 .price(price)
                 .build();
+
+        return productRepository.save(product);
     }
 
     // 테스트용 주문 생성 및 저장 헬퍼 메서드

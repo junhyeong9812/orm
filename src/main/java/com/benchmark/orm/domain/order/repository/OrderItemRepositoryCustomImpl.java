@@ -11,6 +11,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -102,17 +103,36 @@ public class OrderItemRepositoryCustomImpl implements OrderItemRepositoryCustom 
     @Override
     public List<OrderItem> findMostOrderedProducts(int limit) {
         QOrderItem orderItem = QOrderItem.orderItem;
-        QProduct product = QProduct.product;
 
-        // 상품별로 주문된 총 수량 계산
-        NumberExpression<Integer> totalQuantity = orderItem.quantity.sum();
-
-        return queryFactory
-                .selectFrom(orderItem)
-                .leftJoin(orderItem.product, product).fetchJoin()
+        // 1단계: 각 상품별 총 주문 수량을 계산하여 상위 N개 상품 ID 추출
+        List<Long> productIds = queryFactory
+                .select(orderItem.product.id)
+                .from(orderItem)
                 .groupBy(orderItem.product.id)
-                .orderBy(totalQuantity.desc())
+                .orderBy(orderItem.quantity.sum().desc())
                 .limit(limit)
                 .fetch();
+
+        if (productIds.isEmpty()) {
+            return List.of();
+        }
+
+        // 2단계: 각 상품 ID에 대해 가장 큰 주문 수량을 가진 주문상품 하나씩만 조회
+        List<OrderItem> result = new ArrayList<>();
+
+        for (Long productId : productIds) {
+            OrderItem item = queryFactory
+                    .selectFrom(orderItem)
+                    .join(orderItem.product).fetchJoin()
+                    .where(orderItem.product.id.eq(productId))
+                    .orderBy(orderItem.quantity.desc())
+                    .fetchFirst(); // 각 상품 ID에 대해 가장 큰 주문 수량을 가진 항목 하나만 가져옴
+
+            if (item != null) {
+                result.add(item);
+            }
+        }
+
+        return result;
     }
 }
