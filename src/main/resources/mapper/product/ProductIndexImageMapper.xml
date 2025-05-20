@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.benchmark.orm.domain.product.mapper.ProductIndexImageMapper">
+    <!-- ResultMap 정의: 상품 이미지 정보 -->
+    <resultMap id="productIndexImageResultMap" type="com.benchmark.orm.domain.product.entity.ProductIndexImage">
+        <id property="id" column="id"/>
+        <result property="url" column="url"/>
+        <result property="isThumbnail" column="is_thumbnail"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <association property="productIndex" javaType="com.benchmark.orm.domain.product.entity.ProductIndex">
+            <id property="id" column="product_index_id"/>
+            <result property="name" column="product_index_name"/>
+        </association>
+    </resultMap>
+
+    <!-- 상품 이미지 등록 -->
+    <insert id="insert" parameterType="com.benchmark.orm.domain.product.entity.ProductIndexImage" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO product_index_image (url, is_thumbnail, product_index_id)
+        VALUES (#{url}, #{isThumbnail}, #{productIndex.id})
+    </insert>
+
+    <!-- 상품 이미지 정보 수정 -->
+    <update id="update" parameterType="com.benchmark.orm.domain.product.entity.ProductIndexImage">
+        UPDATE product_index_image
+        SET url = #{url},
+        is_thumbnail = #{isThumbnail},
+        product_index_id = #{productIndex.id}
+        WHERE id = #{id}
+    </update>
+
+    <!-- ID로 상품 이미지 삭제 -->
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM product_index_image WHERE id = #{id}
+    </delete>
+
+    <!-- 상품 ID로 관련 이미지 모두 삭제 -->
+    <delete id="deleteByProductIndexId" parameterType="long">
+        DELETE FROM product_index_image WHERE product_index_id = #{productIndexId}
+    </delete>
+
+    <!-- ID로 상품 이미지 조회 -->
+    <select id="findById" parameterType="long" resultMap="productIndexImageResultMap">
+        SELECT i.id, i.url, i.is_thumbnail, i.created_at, i.updated_at,
+        p.id as product_index_id, p.name as product_index_name
+        FROM product_index_image i
+        LEFT JOIN product_index p ON i.product_index_id = p.id
+        WHERE i.id = #{id}
+    </select>
+
+    <!-- 상품 ID로 이미지 조회 -->
+    <select id="findByProductIndexId" parameterType="long" resultMap="productIndexImageResultMap">
+        SELECT i.id, i.url, i.is_thumbnail, i.created_at, i.updated_at,
+        p.id as product_index_id, p.name as product_index_name
+        FROM product_index_image i
+        LEFT JOIN product_index p ON i.product_index_id = p.id
+        WHERE i.product_index_id = #{productIndexId}
+    </select>
+
+    <!-- 상품 ID로 썸네일 이미지 조회 -->
+    <select id="findThumbnailByProductIndexId" parameterType="long" resultMap="productIndexImageResultMap">
+        SELECT i.id, i.url, i.is_thumbnail, i.created_at, i.updated_at,
+        p.id as product_index_id, p.name as product_index_name
+        FROM product_index_image i
+        LEFT JOIN product_index p ON i.product_index_id = p.id
+        WHERE i.product_index_id = #{productIndexId} AND i.is_thumbnail = true
+        LIMIT 1
+    </select>
+</mapper>
