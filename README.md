@@ -94,11 +94,12 @@ NoSQL은 **비정형/반정형 데이터**, **수평 확장**, **높은 쓰기 �
 - 전문 검색 엔진. 문서 기반으로 색인 후, 고속 검색 제공
 - 토큰화, n-gram, 한국어 분석기(노리) 등의 고급 검색 기능을 지원
 - 로그 분석, 추천 시스템, 검색 최적화 등에 활용됨
+- 검색 특화 문서지향 DB로서, 전통적인 KV·Wide-Column NoSQL 과는 용도가 다릅니다
 
 #### Redis (Key-Value)
 - 메모리 기반 Key-Value 저장소로, 매우 빠른 응답 속도 제공
 - 주로 **캐시, 세션 저장소, 실시간 처리** 용도로 사용됨
-- 자료구조형 저장(Key-List, Set 등)과 TTL 설정 지원
+- 자료구조형 저장(Key-List, Set 등)과 TTL 설정 지원 → 키 단위 TTL·Eviction 정책으로 자동 만료/삭제 관리
 
 ## 도커 컨테이너 실행 방법
 
@@ -137,6 +138,7 @@ docker-compose down -v
 
 # Redis
 ./gradlew bootRun --args='--spring.profiles.active=redis'
+# (별도 Spring Data Redis 설정/Repository 구현 필요)
 ```
 
 ## 주요 구현 기능
@@ -164,7 +166,7 @@ docker-compose down -v
 
 각 데이터베이스 관리 도구:
 
-- **H2 콘솔**: http://localhost:8080/h2-console (JDBC URL: jdbc:h2:mem:ormdb)
+- **H2 콘솔**: http://localhost:8080/h2-console (JDBC URL: jdbc:h2:mem:ormdb)(※ spring.h2.console.enabled=true 설정 필요)
 - **Kibana (Elasticsearch)**: http://localhost:5601
 - **MongoDB**: MongoDB Compass 클라이언트 사용 (URL: mongodb://localhost:27017)
 - **Redis**: Redis Commander 또는 Redis Desktop Manager 사용
@@ -184,7 +186,7 @@ docker-compose down -v
 
 ### 결합도 비교
 
-- **JPA**: 데이터베이스와 낮은 결합도, 데이터베이스 변경 용이
+- **JPA**:  SQL 구문에는 낮은 결합도, 그러나 엔티티-스키마 매핑에는 의존적
 - **MyBatis**: 데이터베이스와 높은 결합도, SQL에 의존적
 
 ### 주요 이슈
@@ -278,7 +280,8 @@ where
 
 **차이점**:
 - MyBatis는 명시적으로 변경할 컬럼만 업데이트
-- JPA는 더티 체킹을 통해 모든 컬럼을 업데이트하는 경향이 있음
+- JPA는 더티 체킹으로 변경 여부만 판단하지만, Hibernate 기본 설정은 변경 여부와 무관하게 엔티티의 모든 컬럼을 SET 절에 포함합니다.
+  필드별 업데이트 최소화를 원하면 @DynamicUpdate나 updatable=false를 사용
 - MyBatis는 `updated_at`을 자동으로 `CURRENT_TIMESTAMP`로 설정
 
 #### 1.4 데이터 삭제(DELETE)
@@ -354,7 +357,7 @@ where
 
 **차이점**:
 - MyBatis는 직접 테이블 및 컬럼 별칭을 설정
-- JPA는 `left join fetch` 구문을 사용하여 N+1 문제 방지
+- JPA는 `left join fetch` 구문을 사용하여 N+1 문제 방지 또는 @EntityGraph, hibernate.default_batch_fetch_size 설정으로도 해결 가능
 - JPA는 엔티티 객체 관점에서 쿼리를 작성하고 Hibernate가 SQL로 변환
 - MyBatis는 이미지까지 한 번에 조회하는 3중 조인이 명시적
 
@@ -448,7 +451,9 @@ fetch
 - MyBatis는 `CONCAT` 함수로 와일드카드를 처리
 - QueryDSL은 `lower()` 함수로 대소문자 구분 없는 검색 지원
 - QueryDSL은 `escape '!'` 구문으로 특수문자 처리
-- 페이징 구문: MyBatis는 `LIMIT ? OFFSET ?`, JPA는 `offset ? rows fetch first ? rows only`
+- 페이징 구문: MyBatis는 `LIMIT ? OFFSET ?`, 
+  JPA는 MySQL Dialect → LIMIT ? OFFSET ? PostgreSQL Dialect → OFFSET ? FETCH FIRST ? ROWS ONLY
+  Hibernate는 Dialect 에 따라 LIMIT/FETCH 구문을 자동 선택합니다.
 
 #### 2.4 통계 쿼리
 
@@ -533,6 +538,7 @@ Hibernate: [반복 출력되는 SQL]
 - JPA는 JPQL 주석과 실제 SQL을 함께 로깅
 - MyBatis는 파라미터 타입을 포함하여 로깅하므로 디버깅이 용이
 - Hibernate는 동일 SQL이 여러 번 로깅되는 경향이 있음
+- DDL 검증·prepare/bind 단계 로그 분리로 같은 SQL이 반복 표시될 수 있음
 
 ## 프로젝트 진행 중 얻은 인사이트
 
